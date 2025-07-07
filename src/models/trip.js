@@ -4,11 +4,6 @@ const validator = require('validator');
 const Schema = mongoose.Schema;
 
 const tripSchema = new Schema({
-    host: {
-        type: Schema.Types.ObjectId,
-        ref: 'User',
-        required: true,
-    },
     name: {
         type: String,
         unique: false,
@@ -16,6 +11,11 @@ const tripSchema = new Schema({
         trim: true,
         minLength: 1,
         maxLength: 64,
+        validate(value) {
+            if (validator.isEmpty(value)) {
+                throw new Error("name must not be empty.");
+            }
+        }
     },
     description: {
         type: String,
@@ -24,6 +24,16 @@ const tripSchema = new Schema({
         trim: true,
         minLength: 1,
         maxLength: 255,
+        validate(value) {
+            if (validator.isEmpty(value)) {
+                throw new Error("description must not be empty.");
+            }
+        }
+    },
+    host: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
     },
     park: {
         type: String,
@@ -32,7 +42,7 @@ const tripSchema = new Schema({
         trim: true,
         validate(value) {
             if (!validator.isUUID(value, 4)) {
-                throw new Error("Id is not a valid UUID.");
+                throw new Error("park must be a valid UUIDv4");
             }
         }
     },
@@ -43,7 +53,7 @@ const tripSchema = new Schema({
         trim: true,
         validate(value) {
             if (!validator.isUUID(value, 4)) {
-                throw new Error("Id is not a valid UUID.");
+                throw new Error("campground must be a valid UUIDv4");
             }
         }
     },
@@ -63,7 +73,7 @@ const tripSchema = new Schema({
         required: true,
         validate(value) {
             if (!validator.isISO8601(value.toISOString())) {
-                throw new Error("Date is not in ISO8601 format.");
+                throw new Error("startDate must be ISO8601 format.");
             }
         }
     },
@@ -72,24 +82,70 @@ const tripSchema = new Schema({
         required: true,
         validate(value) {
             if (!validator.isISO8601(value.toISOString())) {
-                throw new Error("Date is not in ISO8601 format.");
+                throw new Error("endDate must be ISO8601 format.");
             }
         }
     },
 },
-    { timestamps: true });
+    { timestamps: true }
+);
 
-// Get all trips for a given user
-/**
- *  findByUser
- *  @param { User } user
- *  @returns [{ trip }]
- */
-tripSchema.statics.findByUser = async (user) => {
-    const trips = await Trip.find({ host: user._id }).exec();
+// --------------- //
+// #region Methods //
+// --------------- //
 
-    return trips;
+tripSchema.methods.toJSON = function () {
+    const trip = this;
+    const tripObject = trip.toObject();
+
+    delete tripObject.__v;
+
+    return tripObject;
 };
+
+// --------------- //
+// #endregion      //
+// --------------- //
+
+// --------------- //
+// #region Statics //
+// --------------- //
+
+// --------------- //
+// #endregion      //
+// --------------- //
+
+// ----------- //
+// #region Pre //
+// ----------- //
+
+tripSchema.pre('deleteOne', { document: true, query: false }, async function (next) {
+    const trip = this;
+
+    await mongoose.model('Excursion').updateMany(
+        { trips: trip._id },
+        { $pull: trip._id }
+    );
+
+    await mongoose.model('User').updateOne(
+        { _id: trip.host },
+        { $pull: { trips: trip._id } }
+    );
+
+    next();
+});
+
+// ----------- //
+// #endregion  //
+// ----------- //
+
+// ------------ //
+// #region Post //
+// ------------ //
+
+// ------------ //
+// #endregion   //
+// ------------ //
 
 const Trip = mongoose.model('Trip', tripSchema);
 

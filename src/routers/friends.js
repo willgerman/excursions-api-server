@@ -12,7 +12,7 @@ const router = new express.Router();
 
 /**
  *  Create Friend Request
- *  https://will-german.github.io/excursions-api-docs/#tag/Friend-Requests/operation/create-friend-request
+ *  [docs link]
  */
 router.post('/friends/requests', auth, async (req, res) => {
     try {
@@ -41,9 +41,11 @@ router.post('/friends/requests', auth, async (req, res) => {
             { $push: { incomingFriendRequests: friendRequest._id } }
         );
 
+        // REPLACE WITH { _id: 1 } FORMAT TO SHOW FIELDS
         const sender = await User.findPublicUser(friendRequest.sender
         );
 
+        // REPLACE WITH { _id: 1 } FORMAT TO SHOW FIELDS
         const receiver = await User.findPublicUser(friendRequest.receiver);
 
         if (sender) {
@@ -183,9 +185,11 @@ router.patch('/friends/requests/:requestId', auth, async (req, res) => {
 
         await FriendRequest.deleteOne({ _id: friendRequest._id });
 
+        // REPLACE WITH { _id: 1 } FORMAT TO SHOW FIELDS
         const sender = await User.findPublicUser(friendRequest.sender
         );
 
+        // REPLACE WITH { _id: 1 } FORMAT TO SHOW FIELDS
         const receiver = await User.findPublicUser(friendRequest.receiver);
 
         if (sender) {

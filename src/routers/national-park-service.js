@@ -11,7 +11,7 @@ const NPS_API_KEY = process.env.NPS_API_KEY;
 
 /**
  *  Get National Parks
- *  https://will-german.github.io/excursions-api-docs/#tag/Park-Details/operation/get-national-parks
+ * 
  */
 router.get('/national-parks', auth, async (req, res) => {
     try {
@@ -60,7 +60,7 @@ router.get('/national-parks', auth, async (req, res) => {
 
 /**
  *  Get National Park Summaries
- *  https://will-german.github.io/excursions-api-docs/#tag/Park-Details/operation/get-national-parks-summary
+ * 
  */
 router.get('/national-parks/summary', auth, async (req, res) => {
     try {
@@ -129,7 +129,7 @@ router.get('/national-parks/summary', auth, async (req, res) => {
 
 /**
  *  Get National Park Codes
- *  []
+ *  
  */
 router.get('/national-parks/codes', auth, async (req, res) => {
     try {
@@ -203,7 +203,7 @@ router.get('/national-parks/codes', auth, async (req, res) => {
 
 /**
  *  Get Campgrounds
- *  https://will-german.github.io/excursions-api-docs/#tag/Park-Details/operation/get-campgrounds
+ * 
  */
 router.get('/campgrounds', auth, async (req, res) => {
     try {
@@ -252,7 +252,7 @@ router.get('/campgrounds', auth, async (req, res) => {
 
 /**
  *  Get Things To Do
- *  https://will-german.github.io/excursions-api-docs/#tag/Park-Details/operation/getThingsToDo
+ * 
  */
 router.get('/things-to-do', auth, async (req, res) => {
     try {
@@ -309,7 +309,7 @@ router.get('/things-to-do', auth, async (req, res) => {
 
 /**
  *  Get Audio
- *  https://will-german.github.io/excursions-api-docs/#tag/Multimedia/operation/get-multimedia-audio
+ * 
  */
 router.get('/multimedia/audio', async (req, res) => {
     try {
@@ -352,7 +352,7 @@ router.get('/multimedia/audio', async (req, res) => {
 
 /**
  *  Get Galleries
- *  https://will-german.github.io/excursions-api-docs/#tag/Multimedia/operation/get-multimedia-galleries
+ * 
  */
 router.get('/multimedia/galleries', async (req, res) => {
     try {
@@ -395,7 +395,7 @@ router.get('/multimedia/galleries', async (req, res) => {
 
 /**
  *  Get Galleries Assets
- *  https://will-german.github.io/excursions-api-docs/#tag/Multimedia/operation/get-multimedia-galleries-assets
+ * 
  */
 router.get('/multimedia/galleries/assets', async (req, res) => {
     try {
@@ -438,7 +438,7 @@ router.get('/multimedia/galleries/assets', async (req, res) => {
 
 /**
  *  Get Videos
- *  https://will-german.github.io/excursions-api-docs/#tag/Multimedia/operation/get-multimedia-videos
+ * 
  */
 router.get('/multimedia/videos', async (req, res) => {
     try {
