@@ -51,8 +51,6 @@ friendRequestSchema.methods.toJSON = function () {
 // #region Pre //
 // ----------- //
 
-// TODO: determine how to handle friend requests lists on user object/model.
-
 friendRequestSchema.pre('deleteOne', { document: true, query: false }, async function (next) {
     const request = this;
 
@@ -76,6 +74,24 @@ friendRequestSchema.pre('deleteOne', { document: true, query: false }, async fun
 // ------------ //
 // #region Post //
 // ------------ //
+
+friendRequestSchema.post('create', { document: true, query: false }, async function (next) {
+    const request = this;
+
+    await mongoose.model('User').updateMany(
+        {
+            $or: [
+                { _id: request.sender },
+                { _id: request.receiver },
+            ]
+        },
+        { $push: { friendRequests: request._id } }
+    );
+
+    // do i need to await invite.save() here ?
+
+    next();
+});
 
 // ------------ //
 // #endregion   //

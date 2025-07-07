@@ -1,8 +1,8 @@
+const mongoose = require('mongoose');
 const express = require('express');
 const FriendRequest = require('../models/friendRequest');
 const User = require('../models/user');
 const auth = require('../middleware/auth');
-const mongoose = require('mongoose');
 
 const router = new express.Router();
 
@@ -14,67 +14,93 @@ const router = new express.Router();
  *  Create Friend Request
  *  [docs link]
  */
-router.post('/friends/requests', auth, async (req, res) => {
+router.post('/friends/:userId', auth, async (req, res) => {
     try {
-        const friend = await User.findById(req.body.friendId);
+        if (!mongoose.isValidObjectId(req.params.userId)) {
+            return res.status(400).send("Invalid Id");
+        }
+
+        const friend = await User.findById(req.body.userId);
 
         if (!friend) {
-            res.status(400).send({ Error: 'Bad Request' });
-            return;
+            return res.status(404).send("Requested resource not found.");
         }
 
-        const data = {
-            "sender": req.user._id,
-            "receiver": req.body.friendId
-        };
+        const isExisting = await FriendRequest.find(
+            {
+                $and: [
+                    { sender: req.user._id },
+                    { receiver: friend._id },
+                ]
+            },
+        );
 
-        const friendRequest = new FriendRequest(data);
+        if (isExisting) {
+            return res.status(409).send("Requested resource already exists.");
+        }
+
+        let friendRequest = new FriendRequest({
+            "sender": req.user._id,
+            "receiver": friend._id
+        });
         await friendRequest.save();
 
-        await User.updateOne(
-            { _id: friendRequest.sender },
-            { $push: { outgoingFriendRequests: friendRequest._id } }
-        );
+        const filter = { _id: friendRequest._id };
 
-        await User.updateOne(
-            { _id: friendRequest.receiver },
-            { $push: { incomingFriendRequests: friendRequest._id } }
-        );
+        const pipeline = FriendRequest.aggregate([
+            { $match: filter },
+            {
+                $lookup: {
+                    from: "users",
+                    foreignField: "_id",
+                    localField: "sender",
+                    as: "sender"
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    foreignField: "_id",
+                    localField: "receiver",
+                    as: "receiver"
+                }
+            },
+            {
+                $project: {
+                    "_id": 1,
+                    "isAccepted": 1,
 
-        // REPLACE WITH { _id: 1 } FORMAT TO SHOW FIELDS
-        const sender = await User.findPublicUser(friendRequest.sender
-        );
+                    "sender._id": 1,
+                    "sender.userName": 1,
+                    "sender.firstName": 1,
+                    "sender.lastName": 1,
+                    "sender.email": 1,
 
-        // REPLACE WITH { _id: 1 } FORMAT TO SHOW FIELDS
-        const receiver = await User.findPublicUser(friendRequest.receiver);
+                    "receiver._id": 1,
+                    "receiver.userName": 1,
+                    "receiver.firstName": 1,
+                    "receiver.lastName": 1,
+                    "receiver.email": 1,
+                }
+            }
+        ]);
 
-        if (sender) {
-            friendRequest.sender = sender;
-        }
+        friendRequest = await pipeline.exec();
 
-        if (receiver) {
-            friendRequest.receiver = receiver;
-        }
-
-        res.status(201).send({ friendRequest });
+        return res.status(201).send({ friendRequest });
     } catch (error) {
         console.log(error);
-        res.status(400).send({ Error: 'Bad Request' });
+        return res.status(500).send("Server encountered an unexpected error. Please try again.");
     }
 });
 
 /**
  *  Get Friend Requests By User
- *  https://will-german.github.io/excursions-api-docs/#tag/Friend-Requests/operation/get-friend-requests
+ *  [docs link]
  */
-router.get('/friends/requests', auth, async (req, res) => {
+router.get('/friends', auth, async (req, res) => {
     try {
-        const filter = {
-            $or: [
-                { sender: req.user._id },
-                { receiver: req.user._id }
-            ]
-        };
+        const filter = { _id: { $in: [...req.user.friendRequests] } };
 
         const pipeline = FriendRequest.aggregate([
             { $match: filter },
@@ -116,131 +142,104 @@ router.get('/friends/requests', auth, async (req, res) => {
 
         const friendRequests = await pipeline.exec();
 
-        res.status(200).send({ friendRequests });
+        if (!friendRequests) {
+            return res.status(404).send("Requested resource not found.");
+        }
+
+        return res.status(200).send({ friendRequests });
     } catch (error) {
         console.log(error);
-        res.status(400).send({ Error: 'Bad Request' });
+        return res.status(500).send("Server encountered an unexpected error. Please try again.");
     }
 });
 
 /**
  *  Handle Friend Request
- *  https://will-german.github.io/excursions-api-docs/#tag/Friend-Requests/operation/handle-friend-request
+ *  [docs link]
  */
 router.patch('/friends/requests/:requestId', auth, async (req, res) => {
-    const mods = req.body;
-
-    if (mods.length === 0) {
-        res.status(400).send({ Error: "Missing updates" });
-        return;
-    }
-
-    const props = Object.keys(mods);
-    const modifiable = ['isAccepted'];
-
-    const isValid = props.every((prop) => modifiable.includes(prop));
-
-    if (!isValid) {
-        res.status(400).send({ Error: 'Invalid updates' });
-        return;
-    }
-
     try {
+        if (!mongoose.isValidObjectId(req.params.requestId)) {
+            return res.status(400).send("Invalid Id");
+        }
+
         const friendRequest = await FriendRequest.findById({ _id: req.params.requestId });
 
         if (!friendRequest) {
-            res.status(400).send({ Error: 'Invalid friendRequest id' });
-            return;
+            return res.status(404).send("Requested resource not found.");
         }
 
-        // if (friendRequest.receiver !== req.user._id) {
-        //     res.status(403).send({ Error: "Forbidden" });
-        //     return;
-        // }
+        if (!friendRequest.receiver.equals(req.user._id)) {
+            return res.status(403).send("Forbidden");
+        }
+
+        const mods = req.body;
+
+        if (mods.length === 0) {
+            return res.status(400).send("Missing updates.");
+        }
+
+        const props = Object.keys(mods);
+        const modifiable = [
+            'isAccepted'
+        ];
+
+        const isValid = props.every((prop) => modifiable.includes(prop));
+
+        if (!isValid) {
+            return res.status(400).send("Invalid updates.");
+        }
 
         props.forEach((prop) => friendRequest[prop] = mods[prop]);
         await friendRequest.save();
 
         if (req.body.isAccepted) {
-            await User.updateOne(
-                { _id: friendRequest.sender },
-                { $push: { friends: friendRequest.receiver } }
-            );
-
-            await User.updateOne(
-                { _id: friendRequest.receiver },
+            await User.updateMany(
+                {
+                    $or: [
+                        { _id: friendRequest.sender },
+                        { _id: friendRequest.receiver },
+                    ]
+                },
                 { $push: { friends: friendRequest.sender } }
             );
         }
 
-        await User.updateOne(
-            { _id: friendRequest.sender },
-            { $pull: { outgoingFriendRequests: friendRequest._id } }
-        );
-
-        await User.updateOne(
-            { _id: friendRequest.receiver },
-            { $pull: { incomingFriendRequests: friendRequest._id } }
-        );
-
         await FriendRequest.deleteOne({ _id: friendRequest._id });
 
-        // REPLACE WITH { _id: 1 } FORMAT TO SHOW FIELDS
-        const sender = await User.findPublicUser(friendRequest.sender
-        );
-
-        // REPLACE WITH { _id: 1 } FORMAT TO SHOW FIELDS
-        const receiver = await User.findPublicUser(friendRequest.receiver);
-
-        if (sender) {
-            friendRequest.sender = sender;
-        }
-
-        if (receiver) {
-            friendRequest.receiver = receiver;
-        }
-
-        res.status(200).send({ friendRequest });
+        return res.status(204).send();
     } catch (error) {
         console.log(error);
-        res.status(400).send({ Error: 'Bad Request' });
+        return res.status(500).send("Server encountered an unexpected error. Please try again.");
     }
 });
 
 /**
  *  Delete Friend Request
- *  https://will-german.github.io/excursions-api-docs/#tag/Friend-Requests/operation/delete-friend-request
+ *  [docs link]
  */
 router.delete('/friends/requests/:requestId', auth, async (req, res) => {
     try {
-        const friendRequest = await FriendRequest.findById(req.params.requestId);
-
-        if (!friendRequest) {
-            res.status(400).send({ Error: 'Bad Request' });
-            return;
+        if (!mongoose.isValidObjectId(req.params.requestId)) {
+            return res.status(400).send("Invalid Id");
         }
 
-        // if (friendRequest.sender !== req.user._id) {
-        //     res.status(403).send({ Error: 'Forbidden' });
-        //     return;
-        // }
+        const friendRequest = await FriendRequest.findById({ _id: req.params.requestId });
 
-        await User.updateOne(
-            { _id: req.user._id },
-            { $pull: { outgoingFriendRequests: req.params.requestId } }
-        );
+        if (!friendRequest) {
+            return res.status(404).send("Requested resource not found.");
+        }
 
-        await User.updateOne(
-            { _id: friendRequest.receiver },
-            { $pull: { incomingFriendRequests: req.params.requestId } }
-        );
+        if (!friendRequest.sender.equals(req.user._id)) {
+            return res.status(403).send("Forbidden");
+        }
 
         await FriendRequest.deleteOne({ _id: req.params.requestId });
 
-        res.status(200).send();
+        return res.status(204).send();
     } catch (error) {
         console.log(error);
-        res.status(400).send({ Error: 'Bad Request' });
+        return res.status(500).send("Server encountered an unexpected error. Please try again.");
     }
 });
 
@@ -254,12 +253,12 @@ router.delete('/friends/requests/:requestId', auth, async (req, res) => {
 
 /**
  *  Get Friends By User
- *  https://will-german.github.io/excursions-api-docs/#tag/Friends/operation/get-friends
+ *  [docs link]
  */
 router.get('/friends', auth, async (req, res) => {
     try {
         const friends = await User.find(
-            { friends: { $all: [req.user._id] } },
+            { _id: { $in: [...req.user.friends] } },
             {
                 _id: 1,
                 userName: 1,
@@ -269,49 +268,45 @@ router.get('/friends', auth, async (req, res) => {
             }
         );
 
-        res.status(200).send({ friends });
+        if (!friends) {
+            return res.status(404).send("Requested resource not found.");
+        }
+
+        return res.status(200).send({ friends });
     } catch (error) {
         console.log(error);
-        res.status(400).send({ Error: 'Bad Request' });
+        return res.status(500).send("Server encountered an unexpected error. Please try again.");
     }
 });
 
 /**
  *  Delete Friend
- *  https://will-german.github.io/excursions-api-docs/#tag/Friends/operation/remove-friend
+ *  [docs link]
  */
-router.delete('/friends/:friendId', auth, async (req, res) => {
+router.delete('/friends/:userId', auth, async (req, res) => {
     try {
-        if (!mongoose.isValidObjectId(req.params.friendId)) {
-            res.status(400).send({ Error: "Invalid friend id" });
-            return;
+        if (!mongoose.isValidObjectId(req.params.userId)) {
+            return res.status(400).send("Invalid Id");
         }
 
-        if (!req.user.friends.includes(req.params.friendId)) {
-            res.status(400).send({ Error: "friendId missing from user's friends list." });
-            return;
+        if (!req.user.friends.includes(req.params.userId)) {
+            return res.status(400).send("Bad Request");
         }
 
         await User.updateOne(
             { _id: req.user._id },
-            { $pull: { friends: req.params.friendId } }
+            { $pull: { friends: req.params.userId } }
         );
 
         await User.updateOne(
-            { _id: req.params.friendId },
-            { $pull: { friends: req.params.friendId } }
+            { _id: req.params.userId },
+            { $pull: { friends: req.user._id } }
         );
 
-        const friend = await User.getPublicProfile(req.params.friendId);
-
-        if (friend) {
-            res.status(200).send({ friend });
-        }
-
-        res.status(200).send();
+        return res.status(204).send();
     } catch (error) {
         console.log(error);
-        res.status(400).send({ Error: 'Bad Request' });
+        return res.status(500).send("Server encountered an unexpected error. Please try again.");
     }
 });
 

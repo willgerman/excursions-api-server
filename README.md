@@ -23,20 +23,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ## Authors
 
 - Will German ([@will-german](https://github.com/will-german))
-- Eric McGregor ([@erimcg](https://github.com/erimcg))
 
 ## Documentation
 
 ### API Protocol
 
-[View on GitHub Pages](https://will-german.github.io/excursions-api-docs/)
+[View on GitHub Pages]()
 
 ## Features
 
 - User Accounts
 - National Park Service integration
 - Friends System
-- Create, modify, or share Excursions
+- Create, modify, or delete Trips
+- Create, modify, delete or share Excursions
 
 ## Environment Variables
 
@@ -47,7 +47,6 @@ To run this project, you will need to add the following environment variables to
 `MONGODB_URL`
 
 `JSON_WEBTOKEN_SECRET`
-
 
 `NPS_API_URL`
 

@@ -74,10 +74,13 @@ excursionInviteSchema.statics.findByUser = async (user) => {
 // #region Pre //
 // ----------- //
 
-// TODO: pre save add receiver to excursion's invitee list.
-
 excursionInviteSchema.pre('deleteOne', { document: true, query: false }, async function (next) {
     const invite = this;
+
+    await mongoose.model('Excursion').updateOne(
+        { _id: invite._id },
+        { $pull: { invitees: invite.receiver } }
+    );
 
     await mongoose.model('User').updateMany(
         {
@@ -99,6 +102,29 @@ excursionInviteSchema.pre('deleteOne', { document: true, query: false }, async f
 // ------------ //
 // #region Post //
 // ------------ //
+
+excursionInviteSchema.post('create', { document: true, query: false }, async function (next) {
+    const invite = this;
+
+    await mongoose.model('User').updateMany(
+        {
+            $or: [
+                { _id: invite.sender },
+                { _id: invite.receiver },
+            ]
+        },
+        { $push: { excursionInvites: invite._id } }
+    );
+
+    await mongoose.model('Excursion').updateOne(
+        { _id: invite.excursion },
+        { $push: { invitees: invite.receiver } }
+    );
+
+    // do i need to await invite.save() here ?
+
+    next();
+});
 
 // ------------ //
 // #endregion   //

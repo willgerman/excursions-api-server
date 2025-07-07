@@ -1,10 +1,9 @@
 const mongoose = require('mongoose');
 const express = require('express');
 const Excursion = require('../models/excursion');
-const Trip = require('../models/trip');
+const ExcursionInvite = require('../models/excursionInvite');
 const User = require('../models/user');
 const auth = require('../middleware/auth');
-// const ExcursionInvite = require('../models/excursionInvite');
 
 const router = new express.Router();
 
@@ -176,7 +175,7 @@ router.get('/excursions', auth, async (req, res) => {
 
         const excursions = await pipeline.exec();
 
-        if (excursions.length === 0) {
+        if (!excursions) {
             return res.status(404).send("Requested resource not found.");
         }
 
@@ -366,8 +365,6 @@ router.patch('/excursion/:excursionId', auth, async (req, res) => {
                     "trips.thingstodo": 1,
                     "trips.startDate": 1,
                     "trips.endDate": 1,
-                    "trips.createdAt": 1,
-                    "trips.updatedAt": 1,
 
                     "host._id": 1,
                     "host.userName": 1,
@@ -436,31 +433,43 @@ router.delete('/excursion/:excursionId', auth, async (req, res) => {
  */
 router.post('/share/excursion/:excursionId', auth, async (req, res) => {
     try {
-        const excursion = await Excursion.findById({ _id: req.params.excursionId });
 
-        if (!excursion) {
-            res.status(400).send({ Error: 'Bad Request' });
-            return;
+        // TODO: Add functionality to this endpoint allowing the user to submit a list of userId's to invite rather than only allowing for one id.
+
+        // read in array
+
+        // perform operation for a single item repeatedly across the array
+
+        // instead of sending the result to the user add each successful addition to a list that is returned by the endpoint once the operations are completed
+
+        if (!mongoose.isValidObjectId(req.params.excursionId)) {
+            return res.status(400).send("Invalid Id");
         }
 
-        const data = {
-            "sender": req.user._id,
-            "receiver": req.body.friendId,
-            "excursion": excursion._id,
-        };
+        let excursion = await Excursion.findById(req.params.excursionId);
 
-        let excursionInvite = new ExcursionInvite(data);
+        if (!excursion) {
+            return res.status(404).send("Requested resource not found.");
+        }
+
+        let excursionInvite = new ExcursionInvite({
+            "sender": req.user._id,
+            "receiver": req.body.userId,
+            "excursion": excursion._id,
+        });
         await excursionInvite.save();
 
         await User.updateOne(
             { _id: req.user._id },
-            { $push: { outgoingExcursionInvites: excursionInvite._id } }
+            { $push: { excursionInvites: excursionInvite._id } }
         );
 
         await User.updateOne(
-            { _id: req.body.friendId },
-            { $push: { incomingExcursionInvites: excursionInvite._id } }
+            { _id: req.body.userId },
+            { $push: { excursionInvites: excursionInvite._id } }
         );
+
+        // probably push the excursionInvite._id to an array here and then use that array with a single filter with the pipeline so that you do not need a lot of pipelines
 
         let filter = { _id: excursionInvite._id };
 
@@ -493,6 +502,18 @@ router.post('/share/excursion/:excursionId', auth, async (req, res) => {
                             foreignField: "_id",
                             localField: "trips",
                             as: "trips",
+                        },
+                    },
+                    {
+                        $project: {
+                            "_id": 1,
+                            "name": 1,
+                            "description": 1,
+                            "park": 1,
+                            "campground": 1,
+                            "thingstodo": 1,
+                            "startDate": 1,
+                            "endDate": 1,
                         }
                     }],
                     as: "excursion"
@@ -518,7 +539,7 @@ router.post('/share/excursion/:excursionId', auth, async (req, res) => {
                     "excursion._id": 1,
                     "excursion.name": 1,
                     "excursion.description": 1,
-                    "excursion.trips": 1, // would be nice to remove "__v" field but w/e lol
+                    "excursion.trips": 1, // test if this was fixed with nested project
                     "excursion.createdAt": 1,
                     "excursion.updatedAt": 1,
                 }
@@ -527,10 +548,10 @@ router.post('/share/excursion/:excursionId', auth, async (req, res) => {
 
         excursionInvite = await pipeline.exec();
 
-        res.status(201).send({ excursionInvite });
+        return res.status(201).send({ excursionInvite });
     } catch (error) {
         console.log(error);
-        res.status(400).send({ Error: 'Bad Request' });
+        return res.status(500).send("Server encountered an unexpected error. Please try again.");
     }
 });
 
@@ -540,12 +561,14 @@ router.post('/share/excursion/:excursionId', auth, async (req, res) => {
  */
 router.get('/share/excursions', auth, async (req, res) => {
     try {
-        const filter = {
-            $or: [
-                { sender: req.user._id },
-                { receiver: req.user._id }
-            ]
-        };
+        // const filter = {
+        //     $or: [
+        //         { sender: req.user._id },
+        //         { receiver: req.user._id }
+        //     ]
+        // };
+
+        const filter = { _id: { $in: [...req.user.excursionInvites] } };
 
         const pipeline = ExcursionInvite.aggregate([
             { $match: filter },
@@ -601,7 +624,7 @@ router.get('/share/excursions', auth, async (req, res) => {
                     "excursion._id": 1,
                     "excursion.name": 1,
                     "excursion.description": 1,
-                    "excursion.trips": 1, // would be nice to remove "__v" field but w/e lol
+                    "excursion.trips": 1, // would be nice to remove "__v" field but w/e lol --> still fix this
                     "excursion.createdAt": 1,
                     "excursion.updatedAt": 1,
                 }
@@ -610,80 +633,75 @@ router.get('/share/excursions', auth, async (req, res) => {
 
         const excursionInvites = await pipeline.exec();
 
-        res.status(200).send({ excursionInvites });
+        if (!excursionInvites) {
+            return res.status(404).send("Requested resource not found.");
+        }
+
+        return res.status(200).send({ excursionInvites });
     } catch (error) {
         console.log(error);
-        res.status(400).send({ Error: 'Bad Request' });
+        return res.status(500).send("Server encountered an unexpected error. Please try again.");
     }
 });
 
 /**
- *  Handle Excursion Invite
+ *  Update Excursion Invite by Id
  *  [docs link]
  */
 router.patch('/share/excursions/:inviteId', auth, async (req, res) => {
-    const mods = req.body;
-
-    if (mods.length === 0) {
-        res.status(400).send({ Error: "Missing updates" });
-        return;
-    }
-
-    const props = Object.keys(mods);
-    const modifiable = ['isAccepted'];
-
-    const isValid = props.every((prop) => modifiable.includes(prop));
-
-    if (!isValid) {
-        res.status(400).send({ Error: "Invalid updates" });
-        return;
-    }
-
     try {
+        if (!mongoose.isValidObjectId(req.params.inviteId)) {
+            return res.status(400).send("Invalid Id");
+        }
+
         const excursionInvite = await ExcursionInvite.findById({ _id: req.params.inviteId });
 
         if (!excursionInvite) {
-            res.status(400).send({ Error: 'Invalid invite id' });
-            return;
+            return res.status(404).send("Requested resource not found.");
         }
 
         if (!excursionInvite.receiver.equals(req.user._id)) {
-            res.status(403).send({ Error: "Forbidden" });
-            return;
+            return res.status(403).send("Forbidden");
+        }
+
+        const mods = req.body;
+
+        if (mods.length === 0) {
+            return res.status(400).send("Missing updates.");
+        }
+
+        const props = Object.keys(mods);
+        const modifiable = [
+            'isAccepted'
+        ];
+
+        const isValid = props.every((prop) => modifiable.includes(prop));
+
+        if (!isValid) {
+            return res.status(400).send("Invalid updates.");
         }
 
         props.forEach((prop) => excursionInvite[prop] = mods[prop]);
         await excursionInvite.save();
 
-        if (req.body.isAccepted) {
+        if (excursionInvite.isAccepted) {
+            await User.updateOne(
+                { _id: excursionInvite.receiver },
+                { $push: { excursions: excursionInvite.excursion } }
+            );
 
             await Excursion.updateOne(
                 { _id: excursionInvite.excursion },
-                { $push: { participants: req.user._id } }
-            );
-
-            await User.updateOne(
-                { _id: req.user._id },
-                { $push: { sharedExcursions: excursionInvite.excursion } }
+                { $push: { participants: excursionInvite.receiver } }
             );
         }
 
-        await User.updateOne(
-            { _id: excursionInvite.sender },
-            { $pull: { outgoingExcursionInvites: excursionInvite._id } }
-        );
-
-        await User.updateOne(
-            { _id: excursionInvite.receiver },
-            { $pull: { incomingExcursionInvites: excursionInvite._id } }
-        );
-
         await ExcursionInvite.deleteOne({ _id: excursionInvite._id });
 
-        res.status(200).send();
+        return res.status(204).send();
     } catch (error) {
         console.log(error);
-        res.status(400).send({ Error: 'Bad Request' });
+        return res.status(500).send("Server encountered an unexpected error. Please try again.");
     }
 });
 
@@ -693,34 +711,26 @@ router.patch('/share/excursions/:inviteId', auth, async (req, res) => {
  */
 router.delete('/share/excursions/:inviteId', auth, async (req, res) => {
     try {
-        const excursionInvite = await ExcursionInvite.findById(req.params.inviteId);
+        if (!mongoose.isValidObjectId(req.params.inviteId)) {
+            return res.status(400).send("Invalid Id");
+        }
+
+        const excursionInvite = await ExcursionInvite.findById({ _id: req.params.inviteId });
 
         if (!excursionInvite) {
-            res.status(400).send({ Error: 'Bad Request' });
-            return;
+            return res.status(404).send("Requested resource not found.");
         }
 
         if (!excursionInvite.sender.equals(req.user._id)) {
-            res.status(403).send({ Error: 'Forbidden' });
-            return;
+            return res.status(403).send("Forbidden");
         }
-
-        await User.updateOne(
-            { _id: excursionInvite.sender },
-            { $pull: { outgoingExcursionInvites: req.params.inviteId } }
-        );
-
-        await User.updateOne(
-            { _id: excursionInvite.receiver },
-            { $pull: { incomingExcursionInvites: req.params.inviteId } }
-        );
 
         await excursionInvite.deleteOne({ _id: req.params.inviteId });
 
-        res.status(200).send();
+        return res.status(204).send();
     } catch (error) {
         console.log(error);
-        res.status(400).send({ Error: 'Bad Request' });
+        return res.status(500).send("Server encountered an unexpected error. Please try again.");
     }
 });
 
@@ -732,24 +742,27 @@ router.delete('/share/excursions/:inviteId', auth, async (req, res) => {
 // #region Shared Excursion Management  //
 // ------------------------------------ //
 
+// refactor this entire segment, it be kinda shite
+
 /**
  *  Remove Participant By Id
  *  [docs link]
  */
 router.delete('/remove/excursions/:excursionId', auth, async (req, res) => {
     try {
-        const excursion = await Excursion.findById({ _id: req.params.excursionId });
+        // refactor this to accept an array of userId's as well.
+
+        if (!mongoose.isValidObjectId(req.params.excursionId)) {
+            return res.status(400).send("Invalid Id");
+        }
+
+        let excursion = await Excursion.findById(req.params.excursionId);
 
         if (!excursion) {
-            res.status(400).send({ Error: "Invalid excursion id" });
-            return;
+            return res.status(404).send("Requested resource not found.");
         }
 
-        if (!excursion.host.equals(req.user._id)) {
-            res.status(403).send({ Error: "Forbidden" });
-            return;
-        }
-
+        // refactor starts here
         if (!req.body.participantId) {
             res.status(400).send({ Error: "Missing participant id" });
         }
@@ -764,10 +777,10 @@ router.delete('/remove/excursions/:excursionId', auth, async (req, res) => {
             { $pull: { sharedExcursions: req.params.excursionId } }
         );
 
-        res.status(200).send();
+        return res.status(204).send();
     } catch (error) {
         console.log(error);
-        res.status(400).send({ Error: 'Bad Request' });
+        return res.status(500).send("Server encountered an unexpected error. Please try again.");
     }
 });
 
