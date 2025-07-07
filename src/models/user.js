@@ -171,9 +171,49 @@ userSchema.pre('save', async function (next) {
 userSchema.pre('deleteOne', { document: true, query: false }, async function (next) {
     const user = this;
 
-    // TODO: Delete all documents related to this user from the database.
+    await mongoose.model('FriendRequest').deleteMany(
+        {
+            $or: [
+                { sender: user._id },
+                { receiver: user._id },
+            ]
+        }
+    );
 
-    // await mongoose.model('Task').deleteMany({ owner: user._id });
+    // NOTE: Should NOT need to delete all friends from this user, since once these operations are complete the user will be deleted.
+
+    await mongoose.model('User').updateMany(
+        { friends: user._id },
+        { $pull: { friends: user._id } }
+    );
+
+    await mongoose.model('ExcursionInvite').deleteMany(
+        {
+            $or: [
+                { sender: user._id },
+                { receiver: user._id },
+            ]
+        }
+    );
+
+    await mongoose.model('Excursion').updateMany(
+        { participants: user._id },
+        { $pull: { participants: user._id } }
+    );
+
+    await mongoose.model('Excursion').updateMany(
+        { invitees: user._id },
+        { $pull: { invitees: user._id } }
+    );
+
+    await mongoose.mongo.model('Trip').deleteMany(
+        { host: user._id }
+    );
+
+    await mongoose.model('Excursion').deleteMany(
+        { host: user._id }
+    );
+
     next();
 });
 

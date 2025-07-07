@@ -4,7 +4,7 @@ const express = require('express');
 const cors = require('cors');
 
 const userRouter = require('./routers/users');
-const npsRouter = require('./routers/national-park-service');
+const npsRouter = require('./routers/nps'); // "NPS" is an acronym for "National Park Service."
 const excursionRouter = require('./routers/excursions');
 const tripRouter = require('./routers/trips');
 const friendRouter = require('./routers/friends');

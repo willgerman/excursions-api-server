@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const express = require('express');
 const User = require('../models/user');
 const auth = require('../middleware/auth');
+const utils = require('../utils'); // determine a better approach to util file(s) and importing them
 
 const router = new express.Router();
 
@@ -15,7 +16,7 @@ const router = new express.Router();
  */
 router.post('/user', async (req, res) => {
     try {
-        // TODO: Disallow similarity between password & other fields.
+        // TODO: Write a utility function to determine the similarity of two strings and return the percentage as a decimal value. If the similarity of the password and other strings (userName, firstName, lastName) is above 50% in any capacity, reject the request.
 
         const user = new User(req.body);
         await user.save();
@@ -34,8 +35,13 @@ router.post('/user', async (req, res) => {
  *  [docs link]
  */
 router.get("/user", auth, async (req, res) => {
-    const user = req.user;
-    return res.status(200).send({ user });
+    try {
+        const user = req.user;
+        return res.status(200).send({ user });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).send("Server encountered an unexpected error. Please try again.");
+    }
 });
 
 /**
@@ -45,7 +51,7 @@ router.get("/user", auth, async (req, res) => {
 router.patch('/user', auth, async (req, res) => {
     try {
 
-        // TODO: Disallow similarity between password & other fields.
+        // TODO: Write a utility function to determine the similarity of two strings and return the percentage as a decimal value. If the similarity of the password and other strings (userName, firstName, lastName) is above 50% in any capacity, reject the request.
 
         const mods = req.body;
 
@@ -122,7 +128,7 @@ router.get('/users', auth, async (req, res) => {
             .skip(parseInt(req.query.start))
             .limit(parseInt(req.query.limit));
 
-        return res.status(200).send(users);
+        return res.status(200).send({ users });
     } catch (error) {
         console.log(error);
         return res.status(500).send("Server encountered an unexpected error. Please try again.");

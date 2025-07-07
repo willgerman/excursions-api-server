@@ -9,9 +9,11 @@ const NPS_API_KEY = process.env.NPS_API_KEY;
 // #region Park Details //
 // -------------------- //
 
+// TODO: Hit it with the refactor
+
 /**
  *  Get National Parks
- * 
+ *  [docs link]
  */
 router.get('/national-parks', auth, async (req, res) => {
     try {
@@ -60,7 +62,7 @@ router.get('/national-parks', auth, async (req, res) => {
 
 /**
  *  Get National Park Summaries
- * 
+ *  [docs link]
  */
 router.get('/national-parks/summary', auth, async (req, res) => {
     try {
@@ -129,7 +131,7 @@ router.get('/national-parks/summary', auth, async (req, res) => {
 
 /**
  *  Get National Park Codes
- *  
+ *  [docs link]
  */
 router.get('/national-parks/codes', auth, async (req, res) => {
     try {
@@ -203,7 +205,7 @@ router.get('/national-parks/codes', auth, async (req, res) => {
 
 /**
  *  Get Campgrounds
- * 
+ *  [docs link]
  */
 router.get('/campgrounds', auth, async (req, res) => {
     try {
@@ -252,7 +254,7 @@ router.get('/campgrounds', auth, async (req, res) => {
 
 /**
  *  Get Things To Do
- * 
+ *  [docs link]
  */
 router.get('/things-to-do', auth, async (req, res) => {
     try {
@@ -302,185 +304,5 @@ router.get('/things-to-do', auth, async (req, res) => {
 // -------------------- //
 // #endregion           //
 // -------------------- //
-
-// ------------------ //
-// #region Multimedia //
-// ------------------ //
-
-/**
- *  Get Audio
- * 
- */
-router.get('/multimedia/audio', async (req, res) => {
-    try {
-        const endpoint = 'multimedia/audio';
-        let url = `${NPS_API_URL}/${endpoint}`;
-
-        const options = {};
-
-        if (!req.query.limit) {
-            res.status(400);
-            throw new Error("Bad Request");
-        }
-
-        let query = req._parsedUrl.search;
-        query += `&api_key=${NPS_API_KEY}`;
-
-        if (query) {
-            url += query;
-        }
-
-        let response = await fetch(url, options);
-
-        if (response.ok) {
-            if (response.status === 200) {
-                const data = await response.json();
-
-                res.status(200).send(data);
-            }
-        } else {
-            if (response.status === 400) {
-                res.status(400);
-                throw new Error("Bad Request");
-            }
-        }
-    } catch (error) {
-        console.log(error);
-        res.status(400).send({ Error: 'Bad Request' });
-    }
-});
-
-/**
- *  Get Galleries
- * 
- */
-router.get('/multimedia/galleries', async (req, res) => {
-    try {
-        const endpoint = 'multimedia/galleries';
-        let url = `${NPS_API_URL}/${endpoint}`;
-
-        const options = {};
-
-        if (!req.query.limit) {
-            res.status(400);
-            throw new Error("Bad Request");
-        }
-
-        let query = req._parsedUrl.search;
-        query += `&api_key=${NPS_API_KEY}`;
-
-        if (query) {
-            url += query;
-        }
-
-        let response = await fetch(url, options);
-
-        if (response.ok) {
-            if (response.status === 200) {
-                const data = await response.json();
-
-                res.status(200).send(data);
-            }
-        } else {
-            if (response.status === 400) {
-                res.status(400);
-                throw new Error("Bad Request");
-            }
-        }
-    } catch (error) {
-        console.log(error);
-        res.status(400).send({ Error: 'Bad Request' });
-    }
-});
-
-/**
- *  Get Galleries Assets
- * 
- */
-router.get('/multimedia/galleries/assets', async (req, res) => {
-    try {
-        const endpoint = 'multimedia/galleries/assets';
-        let url = `${NPS_API_URL}/${endpoint}`;
-
-        const options = {};
-
-        if (!req.query.limit) {
-            res.status(400);
-            throw new Error("Bad Request");
-        }
-
-        let query = req._parsedUrl.search;
-        query += `&api_key=${NPS_API_KEY}`;
-
-        if (query) {
-            url += query;
-        }
-
-        let response = await fetch(url, options);
-
-        if (response.ok) {
-            if (response.status === 200) {
-                const data = await response.json();
-
-                res.status(200).send(data);
-            }
-        } else {
-            if (response.status === 400) {
-                res.status(400);
-                throw new Error("Bad Request");
-            }
-        }
-    } catch (error) {
-        console.log(error);
-        res.status(400).send({ Error: 'Bad Request' });
-    }
-});
-
-/**
- *  Get Videos
- * 
- */
-router.get('/multimedia/videos', async (req, res) => {
-    try {
-        const endpoint = 'multimedia/videos';
-        let url = `${NPS_API_URL}/${endpoint}`;
-
-        const options = {};
-
-        if (!req.query.limit) {
-            res.status(400);
-            throw new Error("Bad Request");
-        }
-
-        let query = req._parsedUrl.search;
-        query += `&api_key=${NPS_API_KEY}`;
-
-        if (query) {
-            url += query;
-        }
-
-        let response = await fetch(url, options);
-
-        if (response.ok) {
-            if (response.status === 200) {
-                const data = await response.json();
-
-                res.status(200).send(data);
-            }
-        } else {
-            if (response.status === 400) {
-                res.status(400);
-                throw new Error("Bad Request");
-            }
-        }
-    } catch (error) {
-        console.log(error);
-        res.status(400).send({ Error: 'Bad Request' });
-    }
-});
-
-// ------------------ //
-// #endregion         //
-// ------------------ //
 
 module.exports = router;
