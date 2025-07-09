@@ -12,7 +12,7 @@ const NPS_API_KEY = process.env.NPS_API_KEY;
 /**
  *  Get National Parks
  *  [docs link]
- *  [nps docs link]
+ *  https://www.nps.gov/subjects/developer/api-documentation.htm#/parks/getPark
  */
 router.get('/national-parks', auth, async (req, res) => {
     try {
@@ -59,7 +59,7 @@ router.get('/national-parks', auth, async (req, res) => {
 /**
  *  Get National Park Codes
  *  [docs link]
- *  [nps docs link]
+ *  https://www.nps.gov/subjects/developer/api-documentation.htm#/parks/getPark
  */
 router.get('/national-parks/codes', auth, async (req, res) => {
     try {
@@ -132,7 +132,7 @@ router.get('/national-parks/codes', auth, async (req, res) => {
 /**
  *  Get Campgrounds
  *  [docs link]
- *  [nps docs link]
+ *  https://www.nps.gov/subjects/developer/api-documentation.htm#/campgrounds
  */
 router.get('/campgrounds', auth, async (req, res) => {
     try {
@@ -179,7 +179,7 @@ router.get('/campgrounds', auth, async (req, res) => {
 /**
  *  Get Things To Do
  *  [docs link]
- *  [nps docs link]
+ *  https://www.nps.gov/subjects/developer/api-documentation.htm#/thingstodo/getThingstodo
  */
 router.get('/things-to-do', auth, async (req, res) => {
     try {
