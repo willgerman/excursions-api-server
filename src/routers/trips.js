@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
 import express from "express";
-import { Trip } from "../models/trip";
-import { User } from "../models/user";
-import { auth } from "../middleware/auth";
+import { Trip } from "../models/trip.js";
+import { User } from "../models/user.js";
+import { auth } from "../middleware/auth.js";
 
 export const router = new express.Router();
 

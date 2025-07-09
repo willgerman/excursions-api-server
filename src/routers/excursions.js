@@ -1,9 +1,9 @@
 import mongoose from "mongoose";
 import express from "express";
-import { Excursion } from "../models/excursion";
-import { ExcursionInvite } from "../models/excursionInvite";
-import { User } from "../models/user";
-import { auth } from "../middleware/auth";
+import { Excursion } from "../models/excursion.js";
+import { ExcursionInvite } from "../models/excursionInvite.js";
+import { User } from "../models/user.js";
+import { auth } from "../middleware/auth.js";
 
 export const router = new express.Router();
 

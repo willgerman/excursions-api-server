@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
 import express from "express";
-import { FriendRequest } from "../models/friendRequest";
-import { User } from "../models/user";
-import { auth } from "../middleware/auth";
+import { FriendRequest } from "../models/friendRequest.js";
+import { User } from "../models/user.js";
+import { auth } from "../middleware/auth.js";
 
 export const router = new express.Router();
 

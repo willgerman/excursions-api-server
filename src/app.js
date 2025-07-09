@@ -4,10 +4,10 @@ import express from "express";
 import cors from "cors";
 
 import { router as userRouter } from "./routers/users.js";
-// const npsRouter = require('./routers/nps');
-// const excursionRouter = require('./routers/excursions');
-// const tripRouter = require('./routers/trips');
-// const friendRouter = require('./routers/friends');
+import { router as npsRouter } from "./routers/nps.js";
+import { router as excursionRouter } from "./routers/excursions.js";
+import { router as tripRouter } from "./routers/trips.js";
+import { router as friendRouter } from "./routers/friends.js";
 
 const app = express();
 app.use(express.json());
@@ -21,10 +21,10 @@ app.use(function (req, res, next) {
 });
 
 app.use(userRouter);
-// app.use(npsRouter);
-// app.use(excursionRouter);
-// app.use(tripRouter);
-// app.use(friendRouter);
+app.use(npsRouter);
+app.use(excursionRouter);
+app.use(tripRouter);
+app.use(friendRouter);
 
 const port = process.env.PORT;
 app.listen(port, () => {
