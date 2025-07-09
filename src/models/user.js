@@ -10,22 +10,34 @@ const userSchema = new Schema({
         type: String,
         required: true,
         trim: true,
-        lowercase: true
-        // validator for if isEmpty
+        lowercase: true,
+        validate(value) {
+            if (validator.isEmpty(value)) {
+                throw new Error('userName must not be empty.');
+            }
+        }
     },
     firstName: {
         type: String,
         required: true,
         trim: true,
         lowercase: true,
-        // validator for if isEmpty
+        validate(value) {
+            if (validator.isEmpty(value)) {
+                throw new Error('firstName must not be empty.');
+            }
+        }
     },
     lastName: {
         type: String,
         required: true,
         trim: true,
         lowercase: true,
-        // validator for if isEmpty
+        validate(value) {
+            if (validator.isEmpty(value)) {
+                throw new Error('lastName must not be empty.');
+            }
+        }
     },
     email: {
         type: String,
@@ -44,59 +56,38 @@ const userSchema = new Schema({
         required: true,
         trim: true,
         minLength: 8,
-        // use "match" property for RegEx to check against
+        validate(value) {
+            const regex = new RegExp("[A-Za-z0-9]");
+
+            if (!regex.test(value)) {
+                throw new Error("password must contain at least one uppercase letter, lowercase letter, and number.");
+            }
+        }
     },
-    avatar: {
-        // TODO: Add profile picture --> return predefined list of images?
-        // type: Buffer (?)
-    },
+    trips: [{
+        type: Schema.Types.ObjectId,
+        ref: 'Trip',
+        required: false,
+    }],
+    excursions: [{
+        type: Schema.Types.ObjectId,
+        ref: 'Excursion',
+        required: false,
+    }],
+    excursionInvites: [{
+        type: Schema.Types.ObjectId,
+        ref: 'ExcursionInvite',
+        required: false,
+    }],
     friends: [{
         type: Schema.Types.ObjectId,
         ref: 'User',
         required: false,
     }],
-    incomingFriendRequests: [{
+    friendRequests: [{
         type: Schema.Types.ObjectId,
         ref: 'FriendRequest',
         required: false,
-    }],
-    outgoingFriendRequests: [{
-        type: Schema.Types.ObjectId,
-        ref: 'FriendRequest',
-        required: false,
-    }],
-    hostedExcursions: [{
-        type: Schema.Types.ObjectId,
-        ref: 'Excursion',
-        default: null,
-        // probably requires a validator to make sure host matches this user id
-    }],
-    sharedExcursions: [{
-        type: Schema.Types.ObjectId,
-        ref: 'Excursion',
-        default: null,
-        // probably requires a validator to make sure host does not match this user id
-    }],
-    completedExcursions: [{
-        type: Schema.Types.ObjectId,
-        ref: 'Excursion',
-        default: null,
-        // probably requires a validator to make sure the "isComplete" property on the Excursion is true
-    }],
-    incomingExcursionInvites: [{
-        type: Schema.Types.ObjectId,
-        ref: 'ExcursionInvite',
-        required: false,
-    }],
-    outgoingExcursionInvites: [{
-        type: Schema.Types.ObjectId,
-        ref: 'ExcursionInvite',
-        required: false,
-    }],
-    hostedTrips: [{
-        type: Schema.Types.ObjectId,
-        ref: 'Trip',
-        default: null,
     }],
     tokens: [{
         token: {
@@ -104,31 +95,25 @@ const userSchema = new Schema({
             required: false
         }
     }],
-});
+},
+    { timestamps: true }
+);
 
+// --------------- //
+// #region Methods //
+// --------------- //
 
-/**
- * 
- * @returns 
- */
 userSchema.methods.toJSON = function () {
     const user = this;
-
     const userObject = user.toObject();
 
     delete userObject.password;
-    delete userObject.__v;
     delete userObject.tokens;
-    delete userObject.avatar;
+    delete userObject.__v;
 
     return userObject;
 };
 
-
-/**
- *  generateAuthToken
- *  @returns string bearerToken
- */
 userSchema.methods.generateAuthToken = async function () {
     const user = this;
 
@@ -140,51 +125,48 @@ userSchema.methods.generateAuthToken = async function () {
     return token;
 };
 
+// --------------- //
+// #endregion      //
+// --------------- //
 
-/**
- *  findByCredentials
- *  @param {*} email 
- *  @param {*} password 
- *  @returns 
- */
+// --------------- //
+// #region Statics //
+// --------------- //
+
 userSchema.statics.findByCredentials = async (email, password) => {
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email });
 
     if (!user) {
-        throw new Error('Unable to sign in');
+        throw new Error("Email or password is incorrect.");
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
-        throw new Error('Unable to sign in');
+        throw new Error("Email or password is incorrect.");
     }
 
     return user;
 };
 
-/**
- *  findPublicUser
- *  @returns object user
- */
-userSchema.statics.findPublicUser = async function (id) {
-    const user = await User.find(
-        { _id: id },
-        {
-            _id: 1,
-            userName: 1,
-            firstName: 1,
-            lastName: 1,
-            email: 1,
-        }
-    );
+// --------------- //
+// #endregion      //
+// --------------- //
 
-    return user;
-};
+// ----------- //
+// #region Pre //
+// ----------- //
 
-/**
- * 
- */
+userSchema.pre('validate', async function (next) {
+    const user = this;
+
+    // TODO: Write string checking function to match the percentage likeness between two strings. Use this hook to prevent users from creating  passwords that match or have too close likeness (>50%) to another field (userName, firstName, lastName, email).
+
+    // NOTE: This method returns a boolean value that is determined by the likeness of 'string' to the current user.password field. If there is a greater than 50% likeness to the user.password field, a value of "true" is returned.
+
+    next();
+});
+
 userSchema.pre('save', async function (next) {
     const user = this;
 
@@ -192,20 +174,72 @@ userSchema.pre('save', async function (next) {
         user.password = await bcrypt.hash(user.password, 8);
     }
 
-    next(); // run the save() method
-});
-
-
-/**
- * 
- */
-userSchema.pre('deleteOne', { document: true, query: false }, async function (next) {
-    const user = this;
-
-    await mongoose.model('Task').deleteMany({ owner: user._id });
     next();
 });
 
+
+userSchema.pre('deleteOne', { document: true, query: false }, async function (next) {
+    const user = this;
+
+    await mongoose.model('FriendRequest').deleteMany(
+        {
+            $or: [
+                { sender: user._id },
+                { receiver: user._id },
+            ]
+        }
+    );
+
+    // NOTE: Should NOT need to delete all friends from this user as once these operations are complete the user will be deleted.
+
+    await mongoose.model('User').updateMany(
+        { friends: user._id },
+        { $pull: { friends: user._id } }
+    );
+
+    await mongoose.model('ExcursionInvite').deleteMany(
+        {
+            $or: [
+                { sender: user._id },
+                { receiver: user._id },
+            ]
+        }
+    );
+
+    await mongoose.model('Excursion').updateMany(
+        { participants: user._id },
+        { $pull: { participants: user._id } }
+    );
+
+    await mongoose.model('Excursion').updateMany(
+        { invitees: user._id },
+        { $pull: { invitees: user._id } }
+    );
+
+    await mongoose.mongo.model('Trip').deleteMany(
+        { host: user._id }
+    );
+
+    await mongoose.model('Excursion').deleteMany(
+        { host: user._id }
+    );
+
+    next();
+});
+
+// ----------- //
+// #endregion  //
+// ----------- //
+
+// ------------ //
+// #region Post //
+// ------------ //
+
+// NOTE: Potential use of post hooks for a notifications system relative to updating documents.
+
+// ------------ //
+// #endregion   //
+// ------------ //
 
 const User = mongoose.model('User', userSchema);
 

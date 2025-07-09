@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const express = require('express');
 const User = require('../models/user');
 const auth = require('../middleware/auth');
@@ -10,111 +11,47 @@ const router = new express.Router();
 
 /**
  *  Create User
- *  https://will-german.github.io/excursions-api-docs/#tag/User-Management/operation/create-user
+ *  [docs link]
  */
 router.post('/user', async (req, res) => {
     try {
         const user = new User(req.body);
-
         await user.save();
+
         const token = await user.generateAuthToken();
 
-        res.status(201).send({ user, token });
+        return res.status(201).send({ user, token });
     } catch (error) {
         console.log(error);
-        res.status(400).send({ Error: 'Bad Request' });
+        return res.status(400).send("Unable to create a new user.");
     }
 });
 
 /**
  *  Get User
- *  https://will-german.github.io/excursions-api-docs/#tag/User-Management/operation/get-user
+ *  [docs link]
  */
 router.get("/user", auth, async (req, res) => {
-    const user = req.user;
-    res.status(200).send({ user });
-});
-
-/**
- *  Update User
- *  https://will-german.github.io/excursions-api-docs/#tag/User-Management/operation/update-user
- */
-router.patch('/user', auth, async (req, res) => {
-    const mods = req.body;
-
-    if (mods.length === 0) {
-        res.status(400).send({ Error: 'Missing updates' });
-    }
-
-    const props = Object.keys(mods);
-    const modifiable = ['firstName', 'lastName', 'userName', 'password', 'email'];
-
-    const isValid = props.every((prop) => modifiable.includes(prop));
-
-    if (!isValid) {
-        return res.status(400).send({ error: 'Invalid updates.' });
-    }
-
     try {
         const user = req.user;
-        props.forEach((prop) => user[prop] = mods[prop]);
-        await user.save();
-
-        res.status(200).send({ user });
+        return res.status(200).send({ user });
     } catch (error) {
         console.log(error);
-        res.status(400).send({ Error: 'Bad Request' });
+        return res.status(500).send("Server encountered an unexpected error. Please try again.");
     }
-});
-
-/**
- *  Delete User
- *  https://will-german.github.io/excursions-api-docs/#tag/User-Management/operation/delete-user
- */
-router.delete('/user', auth, async (req, res) => {
-    try {
-        await User.deleteOne({ _id: req.user._id });
-
-        res.status(200).send();
-    } catch (error) {
-        console.log(error);
-        res.status(400).send({ Error: 'Bad Request' });
-    }
-});
-
-/**
- *  Get Users
- *  https://will-german.github.io/excursions-api-docs/#tag/User-Management/operation/get-users
- */
-router.get('/users', auth, async (req, res) => {
-    let filter = {};
-
-    if (req.query.q) {
-        filter = {
-            $or: [
-                { userName: { $regex: req.query.q, $options: 'i' } },
-                { firstName: { $regex: req.query.q, $options: 'i' } },
-                { lastName: { $regex: req.query.q, $options: 'i' } }
-            ]
-        };
-    }
-
-    const users = await User.find(filter,
-        { userName: 1, firstName: 1, lastName: 1, _id: 1 }
-    )
-        .skip(parseInt(req.query.start))
-        .limit(parseInt(req.query.limit));
-
-    res.status(200).send(users);
 });
 
 /**
  *  Get User By Id
- *  https://will-german.github.io/excursions-api-docs/#tag/User-Management/operation/get-user-by-id
+ *  [docs link]
  */
 router.get('/user/:userId', auth, async (req, res) => {
     try {
-        const user = await User.findById(
+        if (!mongoose.isValidObjectId(req.params.userId)) {
+            return res.status(400).send("Invalid Id");
+        }
+
+        const user = await User.findOne(
             { _id: req.params.userId },
             {
                 _id: 1,
@@ -126,14 +63,106 @@ router.get('/user/:userId', auth, async (req, res) => {
         );
 
         if (!user) {
-            res.status(400).send({ Error: 'Invalid user id' });
-            return;
+            return res.status(404).send("Requested resource not found.");
         }
 
-        res.status(200).send({ user });
+        return res.status(200).send({ user });
     } catch (error) {
         console.log(error);
-        res.status(400).send({ Error: 'Bad Request' });
+        return res.status(500).send("Server encountered an unexpected error. Please try again.");
+    }
+});
+
+/**
+ *  Get Users By Keywords
+ *  [docs link]
+ */
+router.get('/users', auth, async (req, res) => {
+    try {
+        // NOTE: req.query.keywords may need to be better handled (i.e., destructured) to be better used as a search tool.
+
+        let filter = {};
+        if (req.query.keywords) {
+            filter = {
+                $or: [
+                    { userName: { $regex: req.query.keywords, $options: 'i' } },
+                    { firstName: { $regex: req.query.keywords, $options: 'i' } },
+                    { lastName: { $regex: req.query.keywords, $options: 'i' } }
+                ]
+            };
+        }
+
+        const users = await User.find(
+            { $match: filter },
+            {
+                userName: 1,
+                firstName: 1,
+                lastName: 1,
+                _id: 1
+            }
+        )
+            .skip(parseInt(req.query.start))
+            .limit(parseInt(req.query.limit));
+
+        return res.status(200).send({ users });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).send("Server encountered an unexpected error. Please try again.");
+    }
+});
+
+/**
+ *  Update User
+ *  [docs link]
+ */
+router.patch('/user', auth, async (req, res) => {
+    try {
+        const mods = req.body;
+
+        if (mods.length === 0) {
+            return res.status(400).send("Missing updates.");
+        }
+
+        const props = Object.keys(mods);
+        const modifiable = [
+            'userName',
+            'firstName',
+            'lastName',
+            'email',
+            'password'
+        ];
+
+        const isValid = props.every((prop) => modifiable.includes(prop));
+
+        if (!isValid) {
+            return res.status(400).send("Invalid updates.");
+        }
+
+        const user = req.user;
+        props.forEach((prop) => user[prop] = mods[prop]);
+        await user.save();
+
+        return res.status(200).send({ user });
+    } catch (error) {
+        console.log(error);
+        return res.status(400).send("Unable to update user.");
+    }
+});
+
+/**
+ *  Delete User
+ *  [docs link]
+ */
+router.delete('/user', auth, async (req, res) => {
+    try {
+        await User.deleteOne(
+            { _id: req.user._id }
+        );
+
+        return res.status(204).send();
+    } catch (error) {
+        console.log(error);
+        return res.status(500).send("Server encountered an unexpected error. Please try again.");
     }
 });
 
@@ -147,23 +176,24 @@ router.get('/user/:userId', auth, async (req, res) => {
 
 /**
  *  Sign In
- *  https://will-german.github.io/excursions-api-docs/#tag/User-Authentication/operation/sign-user-in
+ *  [docs link]
  */
 router.post('/user/sign-in', async (req, res) => {
     try {
         const user = await User.findByCredentials(req.body.email, req.body.password);
+
         const token = await user.generateAuthToken();
 
-        res.status(200).send({ user, token });
+        return res.status(200).send({ user, token });
     } catch (error) {
         console.log(error);
-        res.status(400).send({ Error: 'Bad Request' });
+        return res.status(400).send(error.message);
     }
 });
 
 /**
  *  Sign Out
- *  https://will-german.github.io/excursions-api-docs/#tag/User-Authentication/operation/sign-user-out
+ *  [docs link]
  */
 router.post("/user/sign-out", auth, async (req, res) => {
     try {
@@ -172,32 +202,15 @@ router.post("/user/sign-out", auth, async (req, res) => {
         });
         await req.user.save();
 
-        res.status(200).send();
+        return res.status(204).send();
     } catch (error) {
         console.log(error);
-        res.status(500).send({ Error: 'Internal Server Error' });
+        return res.status(500).send("Server encountered an unexpected error. Please try again.");
     }
 });
 
 // --------------------------- //
 // #endregion                  //
 // --------------------------- //
-
-// TODO: Implemenet avatars
-
-// -------------------------- //
-// #region User Customization //
-// -------------------------- //
-
-// Get Avatars
-router.get('/user/avatars', auth, async (req, res) => {
-    // get a complete list of avatars from the database
-    // append each returned object to an array
-    // return the array to the client
-});
-
-// -------------------------- //
-// #endregion                 //
-// -------------------------- //
 
 module.exports = router;

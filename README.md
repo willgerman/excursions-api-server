@@ -1,7 +1,14 @@
 
 # USA National Park Excursions
 
-A travel planning app based around the United States National Parks.
+A travel planning api service based around the United States National Parks.
+
+
+## Authors
+
+- Will German ([@willgerman](https://github.com/willgerman))
+
+
 ## License
 
 [GNU Affero General Public License v3.0 (or later)](https://www.gnu.org/licenses/agpl-3.0.en.html)
@@ -20,36 +27,41 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-## Authors
 
-- Will German ([@will-german](https://github.com/will-german))
-- Eric McGregor ([@erimcg](https://github.com/erimcg))
 
-## Documentation
+## API Protocol
 
-### API Protocol
+1. [Excursions API Documentation](#COMINGSOON).
+2. [National Park Service (NPS) API Documentation](https://www.nps.gov/subjects/developer/api-documentation.htm).
 
-[View on GitHub Pages](https://will-german.github.io/excursions-api-docs/)
 
 ## Features
 
 - User Accounts
-- National Park Service integration
+- National Park Service (NPS) integration
 - Friends System
-- Create, modify, or share Excursions
+- Create, modify, or delete Trips
+- Create, modify, delete or share Excursions
+
 
 ## Environment Variables
 
-To run this project, you will need to add the following environment variables to your .env file
+To run this project, you will need to add the following environment variables to your .env file.
 
-`PORT`
+| Key                  | Description                                                 |
+| -------------------- | ----------------------------------------------------------- |
+| PORT                 | The port on which the server will be run (locally).         |
+| MONGODB_URL          | The MongoDB connection string that grants database access.  |
+| JSON_WEBTOKEN_SECRET | The shared secret used to sign and verify JSON Web Tokens.  |
+| NPS_API_URL          | The base URL for the NPS API service.                       |
+| NPS_API_KEY          | The access key granted by NPS to use their API service.     |
 
-`MONGODB_URL`
 
-`JSON_WEBTOKEN_SECRET`
+## Run Locally
+
+Coming Soon.
 
 
-`NPS_API_URL`
+## Deployment
 
-`NPS_API_KEY`
-
+Coming Soon.

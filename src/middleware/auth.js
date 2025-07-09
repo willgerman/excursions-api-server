@@ -11,16 +11,16 @@ const auth = async (req, res, next) => {
         const user = await User.findOne({ _id: decoded._id, 'tokens.token': token });
 
         if (!user) {
-            res.status(400).send({ Error: 'Bad Request' });
+            res.status(400).send("Bad Request");
         }
 
         req.token = token;
         req.user = user;
 
         next();
-
     } catch (error) {
-        res.status(401).send({ error: 'Unauthorized' });
+        console.log(error);
+        return res.status(401).send("Unauthorized");
     }
 };
 

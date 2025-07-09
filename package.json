@@ -1,9 +1,9 @@
 {
   "name": "excursions-api-server",
-  "version": "2.0.1",
   "description": "An api server for the Bridgewater College CSCI-430 Server-side Development course.",
-  "license": "AGPL-3.0-or-later",
+  "version": "1.0.0",
   "author": "Will German",
+  "license": "AGPL-3.0-or-later",
   "type": "commonjs",
   "main": "src/app.js",
   "scripts": {
