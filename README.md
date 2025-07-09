@@ -3,9 +3,11 @@
 
 A travel planning api service based around the United States National Parks.
 
+
 ## Authors
 
 - Will German ([@willgerman](https://github.com/willgerman))
+
 
 ## License
 
@@ -46,13 +48,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 To run this project, you will need to add the following environment variables to your .env file.
 
-| Key                  | Description                                                |
-| -------------------- | ---------------------------------------------------------- |
-| PORT                 | The port on which the server will be run (locally).        |
-| MONGODB_URL          | The MongoDB connection string that grants database access. |
-| JSON_WEBTOKEN_SECRET | The shared secret used to sign and verify JSON Webtokens.  |
-| NPS_API_URL          | The base URL for the NPS API service.                      |
-| NPS_API_KEY          | The access key granted by NPS to use their API service.    |
+| Key                  | Description                                                 |
+| -------------------- | ----------------------------------------------------------- |
+| PORT                 | The port on which the server will be run (locally).         |
+| MONGODB_URL          | The MongoDB connection string that grants database access.  |
+| JSON_WEBTOKEN_SECRET | The shared secret used to sign and verify JSON Web Tokens.  |
+| NPS_API_URL          | The base URL for the NPS API service.                       |
+| NPS_API_KEY          | The access key granted by NPS to use their API service.     |
 
 
 ## Run Locally
