@@ -2,7 +2,6 @@ const mongoose = require('mongoose');
 const express = require('express');
 const User = require('../models/user');
 const auth = require('../middleware/auth');
-const utils = require('../utils'); // determine a better approach to util file(s) and importing them
 
 const router = new express.Router();
 
@@ -16,8 +15,6 @@ const router = new express.Router();
  */
 router.post('/user', async (req, res) => {
     try {
-        // TODO: Write a utility function to determine the similarity of two strings and return the percentage as a decimal value. If the similarity of the password and other strings (userName, firstName, lastName) is above 50% in any capacity, reject the request.
-
         const user = new User(req.body);
         await user.save();
 
@@ -45,14 +42,81 @@ router.get("/user", auth, async (req, res) => {
 });
 
 /**
+ *  Get User By Id
+ *  [docs link]
+ */
+router.get('/user/:userId', auth, async (req, res) => {
+    try {
+        if (!mongoose.isValidObjectId(req.params.userId)) {
+            return res.status(400).send("Invalid Id");
+        }
+
+        const user = await User.findOne(
+            { _id: req.params.userId },
+            {
+                _id: 1,
+                userName: 1,
+                firstName: 1,
+                lastName: 1,
+                email: 1,
+            }
+        );
+
+        if (!user) {
+            return res.status(404).send("Requested resource not found.");
+        }
+
+        return res.status(200).send({ user });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).send("Server encountered an unexpected error. Please try again.");
+    }
+});
+
+/**
+ *  Get Users By Keywords
+ *  [docs link]
+ */
+router.get('/users', auth, async (req, res) => {
+    try {
+        // NOTE: req.query.keywords may need to be better handled (i.e., destructured) to be better used as a search tool.
+
+        let filter = {};
+        if (req.query.keywords) {
+            filter = {
+                $or: [
+                    { userName: { $regex: req.query.keywords, $options: 'i' } },
+                    { firstName: { $regex: req.query.keywords, $options: 'i' } },
+                    { lastName: { $regex: req.query.keywords, $options: 'i' } }
+                ]
+            };
+        }
+
+        const users = await User.find(
+            { $match: filter },
+            {
+                userName: 1,
+                firstName: 1,
+                lastName: 1,
+                _id: 1
+            }
+        )
+            .skip(parseInt(req.query.start))
+            .limit(parseInt(req.query.limit));
+
+        return res.status(200).send({ users });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).send("Server encountered an unexpected error. Please try again.");
+    }
+});
+
+/**
  *  Update User
  *  [docs link]
  */
 router.patch('/user', auth, async (req, res) => {
     try {
-
-        // TODO: Write a utility function to determine the similarity of two strings and return the percentage as a decimal value. If the similarity of the password and other strings (userName, firstName, lastName) is above 50% in any capacity, reject the request.
-
         const mods = req.body;
 
         if (mods.length === 0) {
@@ -76,7 +140,6 @@ router.patch('/user', auth, async (req, res) => {
 
         const user = req.user;
         props.forEach((prop) => user[prop] = mods[prop]);
-
         await user.save();
 
         return res.status(200).send({ user });
@@ -97,70 +160,6 @@ router.delete('/user', auth, async (req, res) => {
         );
 
         return res.status(204).send();
-    } catch (error) {
-        console.log(error);
-        return res.status(500).send("Server encountered an unexpected error. Please try again.");
-    }
-});
-
-/**
- *  Get Users
- *  [docs link]
- *  TODO: Refactor
- */
-router.get('/users', auth, async (req, res) => {
-    try {
-        let filter = {};
-
-        if (req.query.q) {
-            filter = {
-                $or: [
-                    { userName: { $regex: req.query.q, $options: 'i' } },
-                    { firstName: { $regex: req.query.q, $options: 'i' } },
-                    { lastName: { $regex: req.query.q, $options: 'i' } }
-                ]
-            };
-        }
-
-        const users = await User.find(filter,
-            { userName: 1, firstName: 1, lastName: 1, _id: 1 }
-        )
-            .skip(parseInt(req.query.start))
-            .limit(parseInt(req.query.limit));
-
-        return res.status(200).send({ users });
-    } catch (error) {
-        console.log(error);
-        return res.status(500).send("Server encountered an unexpected error. Please try again.");
-    }
-});
-
-/**
- *  Get User By Id
- *  [docs link]
- */
-router.get('/user/:userId', auth, async (req, res) => {
-    try {
-        if (!mongoose.isValidObjectId(req.params.userId)) {
-            return res.status(400).send("Invalid Id");
-        }
-
-        const user = await User.find(
-            { _id: req.params.userId },
-            {
-                _id: 1,
-                userName: 1,
-                firstName: 1,
-                lastName: 1,
-                email: 1,
-            }
-        );
-
-        if (!user) {
-            return res.status(404).send("Requested resource not found.");
-        }
-
-        return res.status(200).send({ user });
     } catch (error) {
         console.log(error);
         return res.status(500).send("Server encountered an unexpected error. Please try again.");

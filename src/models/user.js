@@ -157,6 +157,16 @@ userSchema.statics.findByCredentials = async (email, password) => {
 // #region Pre //
 // ----------- //
 
+userSchema.pre('validate', async function (next) {
+    const user = this;
+
+    // TODO: Write string checking function to match the percentage likeness between two strings. Use this utility to prevent users from creating accounts with passwords that match or have too close likeness (>50%) to another field.
+
+    // NOTE: This method returns a boolean value that is determined by the likeness of 'string' to the current user.password field. If there is a greater than 50% likeness to the user.password field, a value of "true" is returned.
+
+    next();
+});
+
 userSchema.pre('save', async function (next) {
     const user = this;
 
@@ -180,7 +190,7 @@ userSchema.pre('deleteOne', { document: true, query: false }, async function (ne
         }
     );
 
-    // NOTE: Should NOT need to delete all friends from this user, since once these operations are complete the user will be deleted.
+    // NOTE: Should NOT need to delete all friends from this user as once these operations are complete the user will be deleted.
 
     await mongoose.model('User').updateMany(
         { friends: user._id },

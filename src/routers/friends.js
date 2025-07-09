@@ -36,7 +36,7 @@ router.post('/friends/:userId', auth, async (req, res) => {
         );
 
         if (isExisting) {
-            return res.status(409).send("Requested resource already exists.");
+            return res.status(400).send("Bad Request");
         }
 
         let friendRequest = new FriendRequest({
