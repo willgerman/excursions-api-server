@@ -1,10 +1,10 @@
-const mongoose = require('mongoose');
-const express = require('express');
-const FriendRequest = require('../models/friendRequest');
-const User = require('../models/user');
-const auth = require('../middleware/auth');
+import mongoose from "mongoose";
+import express from "express";
+import { FriendRequest } from "../models/friendRequest";
+import { User } from "../models/user";
+import { auth } from "../middleware/auth";
 
-const router = new express.Router();
+export const router = new express.Router();
 
 // ----------------------- //
 // #region Friend Requests //
@@ -313,5 +313,3 @@ router.delete('/friends/:userId', auth, async (req, res) => {
 // ------------------------- //
 // #endregion                //
 // ------------------------- //
-
-module.exports = router;

@@ -1,9 +1,9 @@
-const mongoose = require('mongoose');
-const express = require('express');
-const User = require('../models/user');
-const auth = require('../middleware/auth');
+import mongoose from "mongoose";
+import express from "express";
+import { User } from "../models/user.js";
+import { auth } from "../middleware/auth.js";
 
-const router = new express.Router();
+export const router = new express.Router();
 
 // ----------------------- //
 // #region User Management //
@@ -212,5 +212,3 @@ router.post("/user/sign-out", auth, async (req, res) => {
 // --------------------------- //
 // #endregion                  //
 // --------------------------- //
-
-module.exports = router;

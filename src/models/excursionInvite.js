@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
 const Schema = mongoose.Schema;
 
@@ -47,24 +47,6 @@ excursionInviteSchema.methods.toJSON = function () {
 // --------------- //
 // #region Statics //
 // --------------- //
-
-/**
- *  findByUser
- *  @param { User } user
- *  @returns excursionInvites {}
- */
-excursionInviteSchema.statics.findByUser = async (user) => {
-    const incomingInvites = await ExcursionInvite.find({ receiver: user._id }).exec();
-
-    const outgoingInvites = await ExcursionInvite.find({ sender: user._id }).exec();
-
-    const excursionInvites = {
-        "incoming": incomingInvites,
-        "outgoing": outgoingInvites
-    };
-
-    return excursionInvites;
-};
 
 // --------------- //
 // #endregion      //
@@ -130,6 +112,4 @@ excursionInviteSchema.post('create', { document: true, query: false }, async fun
 // #endregion   //
 // ------------ //
 
-const ExcursionInvite = mongoose.model('ExcursionInvite', excursionInviteSchema);
-
-module.exports = ExcursionInvite;
+export const ExcursionInvite = mongoose.model('ExcursionInvite', excursionInviteSchema);

@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const validator = require('validator');
+import mongoose from "mongoose";
+import validator from "validator";
 
 const Schema = mongoose.Schema;
 
@@ -147,6 +147,4 @@ tripSchema.pre('deleteOne', { document: true, query: false }, async function (ne
 // #endregion   //
 // ------------ //
 
-const Trip = mongoose.model('Trip', tripSchema);
-
-module.exports = Trip;
+export const Trip = mongoose.model('Trip', tripSchema);

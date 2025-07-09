@@ -1,12 +1,11 @@
-const mongoose = require('mongoose');
-const express = require('express');
-const Excursion = require('../models/excursion');
-const ExcursionInvite = require('../models/excursionInvite');
-const User = require('../models/user');
-const auth = require('../middleware/auth');
+import mongoose from "mongoose";
+import express from "express";
+import { Excursion } from "../models/excursion";
+import { ExcursionInvite } from "../models/excursionInvite";
+import { User } from "../models/user";
+import { auth } from "../middleware/auth";
 
-const router = new express.Router();
-
+export const router = new express.Router();
 
 // ---------------------------- //
 // #region Excursion Management //
@@ -822,5 +821,3 @@ router.delete('/leave/excursions/:excursionId', auth, async (req, res) => {
 // ------------------------------------ //
 // #endregion                           //
 // ------------------------------------ //
-
-module.exports = router;

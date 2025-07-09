@@ -1,12 +1,10 @@
-const mongoose = require('mongoose');
-const express = require('express');
-const Excursion = require('../models/excursion');
-const Trip = require('../models/trip');
-const User = require('../models/user');
-const auth = require('../middleware/auth');
+import mongoose from "mongoose";
+import express from "express";
+import { Trip } from "../models/trip";
+import { User } from "../models/user";
+import { auth } from "../middleware/auth";
 
-const router = new express.Router();
-
+export const router = new express.Router();
 
 // ----------------------- //
 // #region Trip Management //
@@ -90,9 +88,8 @@ router.get('/trips', auth, async (req, res) => {
 
         const trips = await pipeline.exec();
 
-        if (trips.length === 0) {
-            // determine best response code for no trips for this user
-            // return res.status(204).send();
+        if (!trips) {
+            return res.status(404).send("Requested resource not found.");
         }
 
         return res.status(200).send({ trips });
@@ -122,7 +119,6 @@ router.get('/trip/:tripId', auth, async (req, res) => {
             return res.status(403).send("Forbidden");
         }
 
-        // can be converted to a pipeline if desired
         const host = await User.findById(
             { _id: trip.host },
             {
@@ -245,5 +241,3 @@ router.delete('/trip/:tripId', auth, async (req, res) => {
 // ----------------------- //
 // #endregion              //
 // ----------------------- //
-
-module.exports = router;
