@@ -93,7 +93,7 @@ router.get('/users', auth, async (req, res) => {
         }
 
         const users = await User.find(
-            { $match: filter },
+            filter,
             {
                 userName: 1,
                 firstName: 1,
