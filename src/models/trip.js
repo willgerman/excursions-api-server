@@ -57,6 +57,17 @@ const tripSchema = new Schema({
             }
         }
     },
+    activities: [{
+        type: String,
+        unique: false,
+        required: false,
+        trim: true,
+        validate(value) {
+            if (!validator.isUUID(value, 4)) {
+                throw new Error("Id is not a valid UUID.");
+            }
+        }
+    }],
     thingstodo: [{
         type: String,
         unique: false,

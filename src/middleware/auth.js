@@ -11,7 +11,7 @@ export const auth = async (req, res, next) => {
         const user = await User.findOne({ _id: decoded._id, 'tokens.token': token });
 
         if (!user) {
-            res.status(400).send("Bad Request");
+            return res.status(400).send("Bad Request");
         }
 
         req.token = token;

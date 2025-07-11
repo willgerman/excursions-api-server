@@ -16,9 +16,26 @@ export const router = new express.Router();
  */
 router.post('/trip', auth, async (req, res) => {
     try {
-        req.body.host = req.user._id;
+        if (!req.body || Object.keys(req.body).length === 0) {
+            return res.status(400).send("Missing payload.");
+        }
 
-        const trip = new Trip(req.body);
+        const props = Object.keys({
+            ...req.body,
+        });
+        const permitted = Object.keys(Trip.schema.obj);
+
+
+        const isPermitted = props.every((prop) => permitted.includes(prop));
+
+        if (!isPermitted) {
+            return res.status(400).send("Invalid payload.");
+        }
+
+        let data = {};
+        props.forEach((prop) => data[prop] = prop);
+
+        const trip = new Trip(data);
         await trip.save();
 
         await User.updateOne(
@@ -147,7 +164,7 @@ router.get('/trip/:tripId', auth, async (req, res) => {
  */
 router.patch('/trip/:tripId', auth, async (req, res) => {
     try {
-        if (!mongoose.isValidObjectId(req.params.excursionId)) {
+        if (!mongoose.isValidObjectId(req.params.tripId)) {
             return res.status(400).send("Invalid Id");
         }
 

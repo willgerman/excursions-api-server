@@ -2,8 +2,18 @@ import mongoose from "mongoose";
 import express from "express";
 import { User } from "../models/user.js";
 import { auth } from "../middleware/auth.js";
+import { payload } from "../middleware/payload.js";
 
 export const router = new express.Router();
+
+// NOTE: An array of permitted fields on the User Schema that can be modified through a request body payload (i.e, Create/Update).
+const permitted = [
+    'userName',
+    'firstName',
+    'lastName',
+    'email',
+    'password',
+];
 
 // ----------------------- //
 // #region User Management //
@@ -13,9 +23,9 @@ export const router = new express.Router();
  *  Create User
  *  [docs link]
  */
-router.post('/user', async (req, res) => {
+router.post('/user', payload(permitted), async (req, res) => {
     try {
-        const user = new User(req.body);
+        const user = new User(req.payload);
         await user.save();
 
         const token = await user.generateAuthToken();
@@ -23,7 +33,16 @@ router.post('/user', async (req, res) => {
         return res.status(201).send({ user, token });
     } catch (error) {
         console.log(error);
-        return res.status(400).send("Unable to create a new user.");
+
+        /**
+         *  11000 is MongoDB's DuplicateKey error code.
+         *  https://www.mongodb.com/docs/manual/reference/error-codes/
+         */
+        if (error.code === 11000) {
+            return res.status(400).send("Unable to create a new user.");
+        }
+
+        return res.status(500).send("Server encountered an unexpected error. Please try again.");
     }
 });
 
@@ -115,36 +134,27 @@ router.get('/users', auth, async (req, res) => {
  *  Update User
  *  [docs link]
  */
-router.patch('/user', auth, async (req, res) => {
+router.patch('/user', auth, payload(permitted), async (req, res) => {
     try {
-        const mods = req.body;
-
-        if (mods.length === 0) {
-            return res.status(400).send("Missing updates.");
-        }
-
-        const props = Object.keys(mods);
-        const modifiable = [
-            'userName',
-            'firstName',
-            'lastName',
-            'email',
-            'password'
-        ];
-
-        const isValid = props.every((prop) => modifiable.includes(prop));
-
-        if (!isValid) {
-            return res.status(400).send("Invalid updates.");
-        }
-
         const user = req.user;
-        props.forEach((prop) => user[prop] = mods[prop]);
+
+        const props = Object.keys(req.payload);
+        props.forEach((prop) => user[prop] = req.payload[prop]);
+
         await user.save();
 
         return res.status(200).send({ user });
     } catch (error) {
         console.log(error);
+
+        /**
+         *  11000 is MongoDB's DuplicateKey error code.
+         *  https://www.mongodb.com/docs/manual/reference/error-codes/
+         */
+        if (error.code === 11000) {
+            return res.status(400).send("Unable to update user.");
+        }
+
         return res.status(400).send("Unable to update user.");
     }
 });
@@ -178,8 +188,14 @@ router.delete('/user', auth, async (req, res) => {
  *  Sign In
  *  [docs link]
  */
-router.post('/user/sign-in', async (req, res) => {
+router.post('/user/sign-in', payload, async (req, res) => {
     try {
+        if (Object.keys(req.body).length === 0) {
+            return res.status(400).send("Missing payload.");
+        }
+
+
+
         const user = await User.findByCredentials(req.body.email, req.body.password);
 
         const token = await user.generateAuthToken();
