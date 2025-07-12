@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { mongo } from "mongoose";
 import validator from "validator";
 
 const Schema = mongoose.Schema;
@@ -153,6 +153,17 @@ tripSchema.pre('deleteOne', { document: true, query: false }, async function (ne
 // ------------ //
 // #region Post //
 // ------------ //
+
+tripSchema.post('create', { document: true, query: false }, async function (next) {
+    const trip = this;
+
+    await mongoose.model('User').updateOne(
+        { _id: trip.host },
+        { $push: { trips: trip._id } }
+    );
+
+    next();
+});
 
 // ------------ //
 // #endregion   //

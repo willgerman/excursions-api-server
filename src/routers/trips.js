@@ -6,6 +6,18 @@ import { auth } from "../middleware/auth.js";
 
 export const router = new express.Router();
 
+// NOTE: An array of permitted fields on the `Trip Schema` that can be modified through a request body payload (i.e, Create/Update, etc).
+const permittedTripFields = [
+    'name',
+    'description',
+    'park',
+    'campground',
+    'activities',
+    'thingstodo',
+    'startDate',
+    'endDate',
+];
+
 // ----------------------- //
 // #region Trip Management //
 // ----------------------- //
@@ -14,36 +26,14 @@ export const router = new express.Router();
  *  Create Trip
  *  [docs link]
  */
-router.post('/trip', auth, async (req, res) => {
+router.post('/trip', auth, payload(permittedTripFields), async (req, res) => {
     try {
-        if (!req.body || Object.keys(req.body).length === 0) {
-            return res.status(400).send("Missing payload.");
-        }
-
-        const props = Object.keys({
-            ...req.body,
-        });
-        const permitted = Object.keys(Trip.schema.obj);
-
-
-        const isPermitted = props.every((prop) => permitted.includes(prop));
-
-        if (!isPermitted) {
-            return res.status(400).send("Invalid payload.");
-        }
-
-        let data = {};
-        props.forEach((prop) => data[prop] = prop);
-
-        const trip = new Trip(data);
+        const trip = new Trip(req.payload);
         await trip.save();
 
-        await User.updateOne(
-            { _id: req.user._id },
-            { $push: { hostedTrips: trip._id } }
-        );
+        // TODO: Determine if this endpoint should leverage NPS to return the park and campground(s) alongside their other data. This could make the client more responsive.
 
-        const host = await User.findById(
+        const host = await User.find(
             { _id: trip.host },
             {
                 _id: 1,
@@ -126,14 +116,14 @@ router.get('/trip/:tripId', auth, async (req, res) => {
             return res.status(400).send("Invalid Id");
         }
 
-        const trip = await Trip.findById({ _id: req.params.tripId });
+        const trip = await Trip.find({ _id: req.params.tripId });
 
         if (!trip) {
             return res.status(404).send("Requested resource not found.");
         }
 
         if (!trip.host.equals(req.user._id)) {
-            return res.status(403).send("Forbidden");
+            return res.status(403).send("Forbidden.");
         }
 
         const host = await User.findById(
@@ -168,7 +158,7 @@ router.patch('/trip/:tripId', auth, async (req, res) => {
             return res.status(400).send("Invalid Id");
         }
 
-        const trip = await Trip.findById({ _id: req.params.tripId });
+        const trip = await Trip.find({ _id: req.params.tripId });
 
         if (!trip) {
             return res.status(404).send("Requested resource not found.");
@@ -178,33 +168,12 @@ router.patch('/trip/:tripId', auth, async (req, res) => {
             return res.status(403).send("Forbidden");
         }
 
-        const mods = req.body;
+        const props = Object.keys(req.payload);
+        props.forEach((prop) => trip[prop] = req.payload[prop]);
 
-        if (mods.length === 0) {
-            return res.status(400).send("Missing updates.");
-        }
-
-        const props = Object.keys(mods);
-        const modifiable = [
-            'name',
-            'description',
-            'park',
-            'campground',
-            'thingstodo',
-            'startDate',
-            'endDate'
-        ];
-
-        const isValid = props.every((prop) => modifiable.includes(prop));
-
-        if (!isValid) {
-            return res.status(400).send("Invalid updates.");
-        }
-
-        props.forEach((prop) => trip[prop] = mods[prop]);
         await trip.save();
 
-        const host = await User.findById(
+        const host = await User.find(
             { _id: trip.host },
             {
                 _id: 1,
@@ -236,7 +205,7 @@ router.delete('/trip/:tripId', auth, async (req, res) => {
             return res.status(400).send("Invalid Id");
         }
 
-        const trip = await Trip.findById({ _id: req.params.tripId });
+        const trip = await Trip.exists({ _id: req.params.tripId });
 
         if (!trip) {
             return res.status(404).send("Requested resource not found.");

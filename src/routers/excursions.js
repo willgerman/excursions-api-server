@@ -305,6 +305,7 @@ router.patch('/excursion/:excursionId', auth, payload(permittedExcursionFields),
             return res.status(403).send("Forbidden");
         }
 
+        const props = Object.keys(req.payload);
         props.forEach((prop) => excursion[prop] = req.payload[prop]);
 
         await excursion.save();
@@ -708,6 +709,7 @@ router.delete('/share/excursions/:inviteId', auth, async (req, res) => {
 // #endregion                       //
 // -------------------------------- //
 
+// NOTE: An array of additional permitted fields on the `Excursion Schema` that can be modified through a request body payload (i.e, Create/Update, etc).
 const permittedSharedExcursionFields = [
     'participants'
 ];
