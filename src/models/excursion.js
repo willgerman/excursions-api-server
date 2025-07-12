@@ -55,12 +55,12 @@ const excursionSchema = new Schema({
     }],
     isPublic: {
         type: Boolean,
-        required: false,
+        required: true,
         default: false,
     },
     isComplete: {
         type: Boolean,
-        required: false,
+        required: true,
         default: false,
     },
 },
@@ -96,7 +96,16 @@ excursionSchema.methods.toJSON = function () {
 // #region Pre //
 // ----------- //
 
-// pre save to order trips and potentially set start/end dates
+// NOTE: `create` hook should call this hook as well.
+excursionSchema.pre('save', { document: true, query: false }, async function (next) {
+    const excursion = this;
+
+    if (excursion.isModified('trips')) {
+        // TODO: Order trips chronologically and set the startDate, and endDate fields appropriately.
+    }
+
+    next();
+});
 
 excursionSchema.pre('deleteOne', { document: true, query: false }, async function (next) {
     const excursion = this;
@@ -111,16 +120,6 @@ excursionSchema.pre('deleteOne', { document: true, query: false }, async functio
         { $pull: { excursions: excursion._id } }
     );
 
-    // await mongoose.model('User').updateOne(
-    //     { _id: excursion.host },
-    //     { $pull: { excursions: excursion._id } }
-    // );
-
-    // await mongoose.model('User').updateMany(
-    //     { _id: { $in: [...excursion.participants] } },
-    //     { $pull: { excursions: excursion._id } }
-    // );
-
     next();
 });
 
@@ -131,6 +130,17 @@ excursionSchema.pre('deleteOne', { document: true, query: false }, async functio
 // ------------ //
 // #region Post //
 // ------------ //
+
+excursionSchema.post('create', { document: true, query: false }, async function (next) {
+    const excursion = this;
+
+    await mongoose.model('User').updateOne(
+        { _id: excursion.host },
+        { $push: { excursions: excursion._id } }
+    );
+
+    next();
+});
 
 // ------------ //
 // #endregion   //

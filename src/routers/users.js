@@ -6,8 +6,8 @@ import { payload } from "../middleware/payload.js";
 
 export const router = new express.Router();
 
-// NOTE: An array of permitted fields on the User Schema that can be modified through a request body payload (i.e, Create/Update).
-const permitted = [
+// NOTE: An array of permitted fields on the `User Schema` that can be modified through a request body payload (i.e, Create/Update, etc).
+const permittedUserFields = [
     'userName',
     'firstName',
     'lastName',
@@ -23,7 +23,7 @@ const permitted = [
  *  Create User
  *  [docs link]
  */
-router.post('/user', payload(permitted), async (req, res) => {
+router.post('/user', payload(permittedUserFields), async (req, res) => {
     try {
         const user = new User(req.payload);
         await user.save();
@@ -99,7 +99,6 @@ router.get('/user/:userId', auth, async (req, res) => {
 router.get('/users', auth, async (req, res) => {
     try {
         // NOTE: req.query.keywords may need to be better handled (i.e., destructured) to be better used as a search tool.
-
         let filter = {};
         if (req.query.keywords) {
             filter = {
@@ -134,7 +133,7 @@ router.get('/users', auth, async (req, res) => {
  *  Update User
  *  [docs link]
  */
-router.patch('/user', auth, payload(permitted), async (req, res) => {
+router.patch('/user', auth, payload(permittedUserFields), async (req, res) => {
     try {
         const user = req.user;
 
@@ -188,22 +187,19 @@ router.delete('/user', auth, async (req, res) => {
  *  Sign In
  *  [docs link]
  */
-router.post('/user/sign-in', payload, async (req, res) => {
+router.post('/user/sign-in', payload(permittedUserFields), async (req, res) => {
     try {
-        if (Object.keys(req.body).length === 0) {
-            return res.status(400).send("Missing payload.");
-        }
-
-
-
-        const user = await User.findByCredentials(req.body.email, req.body.password);
+        const user = await User.findByCredentials(
+            req.payload.email,
+            req.payload.password
+        );
 
         const token = await user.generateAuthToken();
 
         return res.status(200).send({ user, token });
     } catch (error) {
         console.log(error);
-        return res.status(400).send(error.message);
+        return res.status(500).send("Server encountered an unexpected error. Please try again.");
     }
 });
 
@@ -213,6 +209,7 @@ router.post('/user/sign-in', payload, async (req, res) => {
  */
 router.post("/user/sign-out", auth, async (req, res) => {
     try {
+        // TODO: Figure out what the fuck this even does? Looks like some token invalidation at a glance.
         req.user.tokens = req.user.tokens.filter((token) => {
             return token.token !== req.token;
         });

@@ -27,9 +27,9 @@ export const payload = (permitted) => {
             let payload = {};
             props.forEach((prop) => payload[prop] = req.body[prop]);
 
-            req.payload = payload;
-
             // TODO: Add additional layer of data validation here. This is also a good spot to sanitize the data prior to attempting any database operations.
+
+            req.payload = payload;
 
             next();
         } catch {

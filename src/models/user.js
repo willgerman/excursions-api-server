@@ -211,10 +211,11 @@ userSchema.pre('deleteOne', { document: true, query: false }, async function (ne
         { $pull: { participants: user._id } }
     );
 
-    await mongoose.model('Excursion').updateMany(
-        { invitees: user._id },
-        { $pull: { invitees: user._id } }
-    );
+    // TODO: Determine if this call can be safely deleted. It should already be handled by the above 'ExcursionInvite' deleteMany call.
+    // await mongoose.model('Excursion').updateMany(
+    //     { invitees: user._id },
+    //     { $pull: { invitees: user._id } }
+    // );
 
     await mongoose.mongo.model('Trip').deleteMany(
         { host: user._id }
@@ -234,8 +235,6 @@ userSchema.pre('deleteOne', { document: true, query: false }, async function (ne
 // ------------ //
 // #region Post //
 // ------------ //
-
-// NOTE: Potential use of post hooks for a notifications system relative to updating documents.
 
 // ------------ //
 // #endregion   //

@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { mongo } from "mongoose";
 
 const Schema = mongoose.Schema;
 
@@ -15,7 +15,7 @@ const excursionInviteSchema = new Schema({
     },
     isAccepted: {
         type: Boolean,
-        required: false,
+        required: true,
         default: false,
     },
     excursion: {
@@ -55,6 +55,28 @@ excursionInviteSchema.methods.toJSON = function () {
 // ----------- //
 // #region Pre //
 // ----------- //
+
+// NOTE: This will function logically, although the question becomes: Should conditional logic like this be kept in a router or performed using middleware hooks? I personally think keeping this type of logic in the router makes it simpler to read, simpler to debug, and allows the developer to constrain built in middleware hooks to things like cascading deletions or data hashing.
+
+// excursionInviteSchema.pre('save', { document: true, query: false }, async function (next) {
+//     const invite = this;
+
+//     if (invite.isModified('isAccepted')) {
+//         if (invite.isAccepted) {
+//             await mongoose.model('User').updateOne(
+//                 { _id: invite.receiver },
+//                 { $push: { excursions: invite.excursion } }
+//             );
+
+//             await mongoose.model('Excursion').updateOne(
+//                 { _id: invite.excursion },
+//                 { $push: { participants: invite.receiver } }
+//             );
+//         }
+//     }
+
+//     next();
+// });
 
 excursionInviteSchema.pre('deleteOne', { document: true, query: false }, async function (next) {
     const invite = this;
@@ -102,8 +124,6 @@ excursionInviteSchema.post('create', { document: true, query: false }, async fun
         { _id: invite.excursion },
         { $push: { invitees: invite.receiver } }
     );
-
-    // do i need to await invite.save() here ?
 
     next();
 });
