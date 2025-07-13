@@ -6,6 +6,12 @@ import { auth } from "../middleware/auth.js";
 
 export const router = new express.Router();
 
+// NOTE: An array of permitted fields on the `Friend Request Schema` that can be modified through a request body payload (i.e, Create/Update, etc).
+const permittedFriendRequestFields = [
+    'receiver',
+    'isAccepted',
+];
+
 // ----------------------- //
 // #region Friend Requests //
 // ----------------------- //
@@ -14,38 +20,39 @@ export const router = new express.Router();
  *  Create Friend Request
  *  [docs link]
  */
-router.post('/friends/:userId', auth, async (req, res) => {
+router.post('/friends/requests/:userId', auth, payload(permittedFriendRequestFields), async (req, res) => {
     try {
         if (!mongoose.isValidObjectId(req.params.userId)) {
             return res.status(400).send("Invalid Id");
         }
 
-        const friend = await User.findById(req.body.userId);
+        const receiver = await User.find({ _id: req.params.userId });
 
-        if (!friend) {
+        if (!receiver) {
             return res.status(404).send("Requested resource not found.");
         }
 
-        const isExisting = await FriendRequest.find(
+        let request = await FriendRequest.exists(
             {
                 $and: [
                     { sender: req.user._id },
-                    { receiver: friend._id },
+                    { receiver: receiver._id },
                 ]
             },
         );
 
-        if (isExisting) {
-            return res.status(400).send("Bad Request");
+        if (request) {
+            return res.status(409).send("Duplicate resource found.");
         }
 
-        let friendRequest = new FriendRequest({
+        request = new FriendRequest({
             "sender": req.user._id,
-            "receiver": friend._id
+            "receiver": receiver._id
         });
-        await friendRequest.save();
 
-        const filter = { _id: friendRequest._id };
+        await request.save();
+
+        const filter = { _id: request._id };
 
         const pipeline = FriendRequest.aggregate([
             { $match: filter },
@@ -85,9 +92,9 @@ router.post('/friends/:userId', auth, async (req, res) => {
             }
         ]);
 
-        friendRequest = await pipeline.exec();
+        request = await pipeline.exec();
 
-        return res.status(201).send({ friendRequest });
+        return res.status(201).send({ request });
     } catch (error) {
         console.log(error);
         return res.status(500).send("Server encountered an unexpected error. Please try again.");
@@ -98,7 +105,7 @@ router.post('/friends/:userId', auth, async (req, res) => {
  *  Get Friend Requests By User
  *  [docs link]
  */
-router.get('/friends', auth, async (req, res) => {
+router.get('/friends/requests', auth, async (req, res) => {
     try {
         const filter = { _id: { $in: [...req.user.friendRequests] } };
 
@@ -140,13 +147,13 @@ router.get('/friends', auth, async (req, res) => {
             },
         ]);
 
-        const friendRequests = await pipeline.exec();
+        const request = await pipeline.exec();
 
-        if (!friendRequests) {
+        if (!request) {
             return res.status(404).send("Requested resource not found.");
         }
 
-        return res.status(200).send({ friendRequests });
+        return res.status(200).send({ request });
     } catch (error) {
         console.log(error);
         return res.status(500).send("Server encountered an unexpected error. Please try again.");
@@ -154,58 +161,43 @@ router.get('/friends', auth, async (req, res) => {
 });
 
 /**
- *  Handle Friend Request
+ *  Update Friend Request By Id
  *  [docs link]
  */
-router.patch('/friends/requests/:requestId', auth, async (req, res) => {
+router.patch('/friends/requests/:requestId', auth, payload(permittedFriendRequestFields), async (req, res) => {
     try {
         if (!mongoose.isValidObjectId(req.params.requestId)) {
             return res.status(400).send("Invalid Id");
         }
 
-        const friendRequest = await FriendRequest.findById({ _id: req.params.requestId });
+        let request = await FriendRequest.find({ _id: req.params.requestId });
 
-        if (!friendRequest) {
+        if (!request) {
             return res.status(404).send("Requested resource not found.");
         }
 
-        if (!friendRequest.receiver.equals(req.user._id)) {
-            return res.status(403).send("Forbidden");
+        if (!request.receiver.equals(req.user._id)) {
+            return res.status(403).send("Forbidden.");
         }
 
-        const mods = req.body;
+        const props = Object.keys(req.payload);
+        props.forEach((prop) => request[prop] = req.payload[prop]);
 
-        if (mods.length === 0) {
-            return res.status(400).send("Missing updates.");
-        }
+        await request.save();
 
-        const props = Object.keys(mods);
-        const modifiable = [
-            'isAccepted'
-        ];
-
-        const isValid = props.every((prop) => modifiable.includes(prop));
-
-        if (!isValid) {
-            return res.status(400).send("Invalid updates.");
-        }
-
-        props.forEach((prop) => friendRequest[prop] = mods[prop]);
-        await friendRequest.save();
-
-        if (req.body.isAccepted) {
+        if (req.payload.isAccepted) {
             await User.updateMany(
                 {
                     $or: [
-                        { _id: friendRequest.sender },
-                        { _id: friendRequest.receiver },
+                        { _id: request.sender },
+                        { _id: request.receiver },
                     ]
                 },
-                { $push: { friends: friendRequest.sender } }
+                { $push: { friends: request.sender } }
             );
         }
 
-        await FriendRequest.deleteOne({ _id: friendRequest._id });
+        await FriendRequest.deleteOne({ _id: request._id });
 
         return res.status(204).send();
     } catch (error) {
@@ -221,17 +213,17 @@ router.patch('/friends/requests/:requestId', auth, async (req, res) => {
 router.delete('/friends/requests/:requestId', auth, async (req, res) => {
     try {
         if (!mongoose.isValidObjectId(req.params.requestId)) {
-            return res.status(400).send("Invalid Id");
+            return res.status(400).send("Invalid Id.");
         }
 
-        const friendRequest = await FriendRequest.findById({ _id: req.params.requestId });
+        const request = await FriendRequest.exists({ _id: req.params.requestId });
 
-        if (!friendRequest) {
+        if (!request) {
             return res.status(404).send("Requested resource not found.");
         }
 
-        if (!friendRequest.sender.equals(req.user._id)) {
-            return res.status(403).send("Forbidden");
+        if (!request.sender.equals(req.user._id)) {
+            return res.status(403).send("Forbidden.");
         }
 
         await FriendRequest.deleteOne({ _id: req.params.requestId });
@@ -286,11 +278,11 @@ router.get('/friends', auth, async (req, res) => {
 router.delete('/friends/:userId', auth, async (req, res) => {
     try {
         if (!mongoose.isValidObjectId(req.params.userId)) {
-            return res.status(400).send("Invalid Id");
+            return res.status(400).send("Invalid Id.");
         }
 
         if (!req.user.friends.includes(req.params.userId)) {
-            return res.status(400).send("Bad Request");
+            return res.status(400).send("Bad Request.");
         }
 
         await User.updateOne(
