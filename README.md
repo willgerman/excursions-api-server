@@ -76,7 +76,7 @@ All instructions below are written for MacOS/Unix systems. If you are on a diffe
 #### 1. Clone the repository and change directories in to the project.
 ```
 git clone git@github.com:willgerman/excursions-api-server.git
-cd `./excursions-api-server'
+cd ./excursions-api-server
 ```
 
 #### 2. Install dependencies.
