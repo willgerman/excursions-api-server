@@ -1,7 +1,7 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/user');
+import jwt from "jsonwebtoken";
+import { User } from "../models/user.js";
 
-const auth = async (req, res, next) => {
+export const auth = async (req, res, next) => {
     try {
         let token = req.header('Authorization');
         token = token.replace('Bearer ', '');
@@ -11,7 +11,7 @@ const auth = async (req, res, next) => {
         const user = await User.findOne({ _id: decoded._id, 'tokens.token': token });
 
         if (!user) {
-            res.status(400).send("Bad Request");
+            return res.status(400).send("Bad Request");
         }
 
         req.token = token;
@@ -23,5 +23,3 @@ const auth = async (req, res, next) => {
         return res.status(401).send("Unauthorized");
     }
 };
-
-module.exports = auth;

@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
 const Schema = mongoose.Schema;
 
@@ -97,6 +97,4 @@ friendRequestSchema.post('create', { document: true, query: false }, async funct
 // #endregion   //
 // ------------ //
 
-const FriendRequest = mongoose.model('FriendRequest', friendRequestSchema);
-
-module.exports = FriendRequest;
+export const FriendRequest = mongoose.model('FriendRequest', friendRequestSchema);

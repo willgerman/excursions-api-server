@@ -1,13 +1,13 @@
-require('./db/mongoose');
+import './db/mongoose.js';
 
-const express = require('express');
-const cors = require('cors');
+import express from "express";
+import cors from "cors";
 
-const userRouter = require('./routers/users');
-const npsRouter = require('./routers/nps'); // "NPS" is an acronym for "National Park Service."
-const excursionRouter = require('./routers/excursions');
-const tripRouter = require('./routers/trips');
-const friendRouter = require('./routers/friends');
+import { router as userRouter } from "./routers/users.js";
+import { router as npsRouter } from "./routers/nps.js";
+import { router as excursionRouter } from "./routers/excursions.js";
+import { router as tripRouter } from "./routers/trips.js";
+import { router as friendRouter } from "./routers/friends.js";
 
 const app = express();
 app.use(express.json());

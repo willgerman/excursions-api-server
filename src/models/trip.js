@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const validator = require('validator');
+import mongoose, { mongo } from "mongoose";
+import validator from "validator";
 
 const Schema = mongoose.Schema;
 
@@ -57,6 +57,17 @@ const tripSchema = new Schema({
             }
         }
     },
+    activities: [{
+        type: String,
+        unique: false,
+        required: false,
+        trim: true,
+        validate(value) {
+            if (!validator.isUUID(value, 4)) {
+                throw new Error("Id is not a valid UUID.");
+            }
+        }
+    }],
     thingstodo: [{
         type: String,
         unique: false,
@@ -143,10 +154,19 @@ tripSchema.pre('deleteOne', { document: true, query: false }, async function (ne
 // #region Post //
 // ------------ //
 
+tripSchema.post('create', { document: true, query: false }, async function (next) {
+    const trip = this;
+
+    await mongoose.model('User').updateOne(
+        { _id: trip.host },
+        { $push: { trips: trip._id } }
+    );
+
+    next();
+});
+
 // ------------ //
 // #endregion   //
 // ------------ //
 
-const Trip = mongoose.model('Trip', tripSchema);
-
-module.exports = Trip;
+export const Trip = mongoose.model('Trip', tripSchema);

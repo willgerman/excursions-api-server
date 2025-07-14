@@ -1,12 +1,22 @@
-const mongoose = require('mongoose');
-const express = require('express');
-const Excursion = require('../models/excursion');
-const Trip = require('../models/trip');
-const User = require('../models/user');
-const auth = require('../middleware/auth');
+import mongoose from "mongoose";
+import express from "express";
+import { Trip } from "../models/trip.js";
+import { User } from "../models/user.js";
+import { auth } from "../middleware/auth.js";
 
-const router = new express.Router();
+export const router = new express.Router();
 
+// NOTE: An array of permitted fields on the `Trip Schema` that can be modified through a request body payload (i.e, Create/Update, etc).
+const permittedTripFields = [
+    'name',
+    'description',
+    'park',
+    'campground',
+    'activities',
+    'thingstodo',
+    'startDate',
+    'endDate',
+];
 
 // ----------------------- //
 // #region Trip Management //
@@ -16,19 +26,14 @@ const router = new express.Router();
  *  Create Trip
  *  [docs link]
  */
-router.post('/trip', auth, async (req, res) => {
+router.post('/trip', auth, payload(permittedTripFields), async (req, res) => {
     try {
-        req.body.host = req.user._id;
-
-        const trip = new Trip(req.body);
+        const trip = new Trip(req.payload);
         await trip.save();
 
-        await User.updateOne(
-            { _id: req.user._id },
-            { $push: { hostedTrips: trip._id } }
-        );
+        // NOTE: The NPS API could be leveraged here to return additional data without having the client make multiple requests to the web server (i.e., park, campground, etc).
 
-        const host = await User.findById(
+        const host = await User.find(
             { _id: trip.host },
             {
                 _id: 1,
@@ -75,6 +80,7 @@ router.get('/trips', auth, async (req, res) => {
                     "description": 1,
                     "park": 1,
                     "campground": 1,
+                    "activities": 1,
                     "thingstodo": 1,
                     "startDate": 1,
                     "endDate": 1,
@@ -90,9 +96,8 @@ router.get('/trips', auth, async (req, res) => {
 
         const trips = await pipeline.exec();
 
-        if (trips.length === 0) {
-            // determine best response code for no trips for this user
-            // return res.status(204).send();
+        if (!trips) {
+            return res.status(404).send("Requested resource not found.");
         }
 
         return res.status(200).send({ trips });
@@ -112,17 +117,16 @@ router.get('/trip/:tripId', auth, async (req, res) => {
             return res.status(400).send("Invalid Id");
         }
 
-        const trip = await Trip.findById({ _id: req.params.tripId });
+        const trip = await Trip.find({ _id: req.params.tripId });
 
         if (!trip) {
             return res.status(404).send("Requested resource not found.");
         }
 
         if (!trip.host.equals(req.user._id)) {
-            return res.status(403).send("Forbidden");
+            return res.status(403).send("Forbidden.");
         }
 
-        // can be converted to a pipeline if desired
         const host = await User.findById(
             { _id: trip.host },
             {
@@ -151,11 +155,11 @@ router.get('/trip/:tripId', auth, async (req, res) => {
  */
 router.patch('/trip/:tripId', auth, async (req, res) => {
     try {
-        if (!mongoose.isValidObjectId(req.params.excursionId)) {
+        if (!mongoose.isValidObjectId(req.params.tripId)) {
             return res.status(400).send("Invalid Id");
         }
 
-        const trip = await Trip.findById({ _id: req.params.tripId });
+        const trip = await Trip.find({ _id: req.params.tripId });
 
         if (!trip) {
             return res.status(404).send("Requested resource not found.");
@@ -165,33 +169,12 @@ router.patch('/trip/:tripId', auth, async (req, res) => {
             return res.status(403).send("Forbidden");
         }
 
-        const mods = req.body;
+        const props = Object.keys(req.payload);
+        props.forEach((prop) => trip[prop] = req.payload[prop]);
 
-        if (mods.length === 0) {
-            return res.status(400).send("Missing updates.");
-        }
-
-        const props = Object.keys(mods);
-        const modifiable = [
-            'name',
-            'description',
-            'park',
-            'campground',
-            'thingstodo',
-            'startDate',
-            'endDate'
-        ];
-
-        const isValid = props.every((prop) => modifiable.includes(prop));
-
-        if (!isValid) {
-            return res.status(400).send("Invalid updates.");
-        }
-
-        props.forEach((prop) => trip[prop] = mods[prop]);
         await trip.save();
 
-        const host = await User.findById(
+        const host = await User.find(
             { _id: trip.host },
             {
                 _id: 1,
@@ -223,7 +206,7 @@ router.delete('/trip/:tripId', auth, async (req, res) => {
             return res.status(400).send("Invalid Id");
         }
 
-        const trip = await Trip.findById({ _id: req.params.tripId });
+        const trip = await Trip.exists({ _id: req.params.tripId });
 
         if (!trip) {
             return res.status(404).send("Requested resource not found.");
@@ -245,5 +228,3 @@ router.delete('/trip/:tripId', auth, async (req, res) => {
 // ----------------------- //
 // #endregion              //
 // ----------------------- //
-
-module.exports = router;

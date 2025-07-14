@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose, { mongo } from "mongoose";
 
 const Schema = mongoose.Schema;
 
@@ -15,7 +15,7 @@ const excursionInviteSchema = new Schema({
     },
     isAccepted: {
         type: Boolean,
-        required: false,
+        required: true,
         default: false,
     },
     excursion: {
@@ -48,24 +48,6 @@ excursionInviteSchema.methods.toJSON = function () {
 // #region Statics //
 // --------------- //
 
-/**
- *  findByUser
- *  @param { User } user
- *  @returns excursionInvites {}
- */
-excursionInviteSchema.statics.findByUser = async (user) => {
-    const incomingInvites = await ExcursionInvite.find({ receiver: user._id }).exec();
-
-    const outgoingInvites = await ExcursionInvite.find({ sender: user._id }).exec();
-
-    const excursionInvites = {
-        "incoming": incomingInvites,
-        "outgoing": outgoingInvites
-    };
-
-    return excursionInvites;
-};
-
 // --------------- //
 // #endregion      //
 // --------------- //
@@ -73,6 +55,28 @@ excursionInviteSchema.statics.findByUser = async (user) => {
 // ----------- //
 // #region Pre //
 // ----------- //
+
+// NOTE: This will function logically, although the question becomes: Should conditional logic like this be kept in a router or performed using middleware hooks? I personally think keeping this type of logic in the router makes it simpler to read, simpler to debug, and allows the developer to constrain built in middleware hooks to things like cascading deletions or data hashing.
+
+// excursionInviteSchema.pre('save', { document: true, query: false }, async function (next) {
+//     const invite = this;
+
+//     if (invite.isModified('isAccepted')) {
+//         if (invite.isAccepted) {
+//             await mongoose.model('User').updateOne(
+//                 { _id: invite.receiver },
+//                 { $push: { excursions: invite.excursion } }
+//             );
+
+//             await mongoose.model('Excursion').updateOne(
+//                 { _id: invite.excursion },
+//                 { $push: { participants: invite.receiver } }
+//             );
+//         }
+//     }
+
+//     next();
+// });
 
 excursionInviteSchema.pre('deleteOne', { document: true, query: false }, async function (next) {
     const invite = this;
@@ -121,8 +125,6 @@ excursionInviteSchema.post('create', { document: true, query: false }, async fun
         { $push: { invitees: invite.receiver } }
     );
 
-    // do i need to await invite.save() here ?
-
     next();
 });
 
@@ -130,6 +132,4 @@ excursionInviteSchema.post('create', { document: true, query: false }, async fun
 // #endregion   //
 // ------------ //
 
-const ExcursionInvite = mongoose.model('ExcursionInvite', excursionInviteSchema);
-
-module.exports = ExcursionInvite;
+export const ExcursionInvite = mongoose.model('ExcursionInvite', excursionInviteSchema);
