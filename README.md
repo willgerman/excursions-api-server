@@ -4,9 +4,11 @@
 A travel planning api service based around the United States National Parks.
 
 
+
 ## Authors
 
 - Will German ([@willgerman](https://github.com/willgerman))
+
 
 
 ## License
@@ -29,19 +31,28 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
+
 ## API Protocol
 
 1. [Excursions API Documentation](#COMINGSOON).
 2. [National Park Service (NPS) API Documentation](https://www.nps.gov/subjects/developer/api-documentation.htm).
 
 
+
 ## Features
 
-- User Accounts
-- National Park Service (NPS) integration
-- Friends System
-- Create, modify, or delete Trips
-- Create, modify, delete or share Excursions
+- Accounts & Authentication
+- Friends
+- Excursions & Trips
+- Invites & Sharing
+- National Park Service (NPS) Integration
+
+#### Coming Soon:
+
+- Additional Data Validation
+- User Input Sanitization
+- Rate Limiting
+
 
 
 ## Environment Variables
@@ -57,11 +68,28 @@ To run this project, you will need to add the following environment variables to
 | NPS_API_KEY          | The access key granted by NPS to use their API service.     |
 
 
+
 ## Run Locally
 
-Coming Soon.
+All instructions below are written for MacOS/Unix systems. If you are on a different environment you must use the equivalent commands.
 
+#### 1. Clone the repository and change directories in to the project.
+```
+git clone git@github.com:willgerman/excursions-api-server.git
+cd `./excursions-api-server'
+```
 
-## Deployment
+#### 2. Install dependencies.
+```
+npm install
+```
 
-Coming Soon.
+#### 3. Create .env file in the root directory and configure environment variables. See [Section: Environmnet Variables](#environment-variables) for required variables.
+```
+touch .env
+```
+
+#### 4. Run the server.
+```
+npm run dev
+```
