@@ -73,6 +73,7 @@ router.post('/excursion', auth, payload(permittedExcursionFields), async (req, r
                     "trips.description": 1,
                     "trips.park": 1,
                     "trips.campground": 1,
+                    "trips.activities": 1,
                     "trips.thingstodo": 1,
                     "trips.startDate": 1,
                     "trips.endDate": 1,
@@ -99,6 +100,7 @@ router.post('/excursion', auth, payload(permittedExcursionFields), async (req, r
         console.log(error);
 
         // TODO: Implement handling for adding the same trip twice. Potentially a DuplicateKey error code.
+
         return res.status(400).send("Unable to create new excursion.");
 
         // return res.status(500).send("Server encountered an unexpected error. Please try again.");
@@ -162,6 +164,7 @@ router.get('/excursions', auth, async (req, res) => {
                     "trips.description": 1,
                     "trips.park": 1,
                     "trips.campground": 1,
+                    "trips.activities": 1,
                     "trips.thingstodo": 1,
                     "trips.startDate": 1,
                     "trips.endDate": 1,
@@ -257,6 +260,7 @@ router.get('/excursion/:excursionId', auth, async (req, res) => {
                     "trips.description": 1,
                     "trips.park": 1,
                     "trips.campground": 1,
+                    "trips.activities": 1,
                     "trips.thingstodo": 1,
                     "trips.startDate": 1,
                     "trips.endDate": 1,
@@ -351,6 +355,7 @@ router.patch('/excursion/:excursionId', auth, payload(permittedExcursionFields),
                     "trips.description": 1,
                     "trips.park": 1,
                     "trips.campground": 1,
+                    "trips.activities": 1,
                     "trips.thingstodo": 1,
                     "trips.startDate": 1,
                     "trips.endDate": 1,
@@ -374,7 +379,7 @@ router.patch('/excursion/:excursionId', auth, payload(permittedExcursionFields),
 
         return res.status(200).send({ excursion });
     } catch (error) {
-        // TODO: Explore errors from MongoDB (i.e., 11000) that may occur when updating the document. Handle those accordingly.
+        // TODO: Explore errors from MongoDB (i.e., 11000) that may occur when updating the document. Handle those accordingly. (i.e., duplicate trip key).
 
         console.log(error);
         return res.status(500).send("Server encountered an unexpected error. Please try again.");
@@ -462,6 +467,7 @@ router.post('/share/excursion/:excursionId', auth, payload(permittedExcursionInv
 
         let filter = { _id: invite._id };
 
+        // TODO: Test nested projection.
         const pipeline = ExcursionInvite.aggregate([
             { $match: filter },
             {
@@ -500,6 +506,7 @@ router.post('/share/excursion/:excursionId', auth, payload(permittedExcursionInv
                             "description": 1,
                             "park": 1,
                             "campground": 1,
+                            "activities": 1,
                             "thingstodo": 1,
                             "startDate": 1,
                             "endDate": 1,
@@ -528,7 +535,7 @@ router.post('/share/excursion/:excursionId', auth, payload(permittedExcursionInv
                     "excursion._id": 1,
                     "excursion.name": 1,
                     "excursion.description": 1,
-                    "excursion.trips": 1, // TODO: Test if the current implementation allows configuration of trips projection.
+                    "excursion.trips": 1,
                     "excursion.createdAt": 1,
                     "excursion.updatedAt": 1,
                 }
@@ -610,7 +617,7 @@ router.get('/share/excursions', auth, async (req, res) => {
                     "excursion._id": 1,
                     "excursion.name": 1,
                     "excursion.description": 1,
-                    "excursion.trips": 1, // would be nice to remove "__v" field but w/e lol --> still fix this
+                    "excursion.trips": 1,
                     "excursion.createdAt": 1,
                     "excursion.updatedAt": 1,
                 }
@@ -738,6 +745,8 @@ router.delete('/share/excursions/:excursionId', auth, payload(permittedSharedExc
             return res.status(403).send("Forbidden.");
         }
 
+        // TODO: Determine if there should be some form of validation if there is an array containing some participant id's and non-participant id's.
+
         await Excursion.updateOne(
             { _id: req.params.excursionId },
             { $pull: { participants: { $in: [...req.payload.participants] } } }
@@ -789,6 +798,7 @@ router.delete('/share/excursions/:excursionId', auth, payload(permittedSharedExc
                     "trips.description": 1,
                     "trips.park": 1,
                     "trips.campground": 1,
+                    "trips.activities": 1,
                     "trips.thingstodo": 1,
                     "trips.startDate": 1,
                     "trips.endDate": 1,
@@ -824,7 +834,7 @@ router.delete('/share/excursions/:excursionId', auth, payload(permittedSharedExc
 router.delete('/leave/excursions/:excursionId', auth, payload(permittedSharedExcursionFields), async (req, res) => {
     try {
         if (!mongoose.isValidObjectId(req.params.excursionId)) {
-            return res.status(400).send("Invalid Id");
+            return res.status(400).send("Invalid Id.");
         }
 
         let excursion = await Excursion.exists({ _id: req.params.excursionId });
@@ -837,9 +847,8 @@ router.delete('/leave/excursions/:excursionId', auth, payload(permittedSharedExc
             return res.status(403).send("Forbidden.");
         }
 
-        // TODO: Send a more descriptive error message.
         if (!excursion.participants.includes(req.user._id)) {
-            return res.status(400).send("Invalid Id");
+            return res.status(409).send("No such participant.");
         }
 
         await Excursion.updateOne(

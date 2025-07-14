@@ -31,7 +31,7 @@ router.post('/trip', auth, payload(permittedTripFields), async (req, res) => {
         const trip = new Trip(req.payload);
         await trip.save();
 
-        // TODO: Determine if this endpoint should leverage NPS to return the park and campground(s) alongside their other data. This could make the client more responsive.
+        // NOTE: The NPS API could be leveraged here to return additional data without having the client make multiple requests to the web server (i.e., park, campground, etc).
 
         const host = await User.find(
             { _id: trip.host },
@@ -80,6 +80,7 @@ router.get('/trips', auth, async (req, res) => {
                     "description": 1,
                     "park": 1,
                     "campground": 1,
+                    "activities": 1,
                     "thingstodo": 1,
                     "startDate": 1,
                     "endDate": 1,

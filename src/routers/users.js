@@ -209,7 +209,6 @@ router.post('/user/sign-in', payload(permittedUserFields), async (req, res) => {
  */
 router.post("/user/sign-out", auth, async (req, res) => {
     try {
-        // TODO: Figure out what the fuck this even does? Looks like some token invalidation at a glance.
         req.user.tokens = req.user.tokens.filter((token) => {
             return token.token !== req.token;
         });
