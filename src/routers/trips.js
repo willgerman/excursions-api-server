@@ -3,6 +3,7 @@ import express from "express";
 import { Trip } from "../models/trip.js";
 import { User } from "../models/user.js";
 import { auth } from "../middleware/auth.js";
+import { payload } from "../middleware/payload.js";
 
 export const router = new express.Router();
 
