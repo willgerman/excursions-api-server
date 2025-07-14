@@ -3,13 +3,13 @@
 
 A travel planning api service based around the United States National Parks.
 
-
+<br/>
 
 ## Authors
 
 - Will German ([@willgerman](https://github.com/willgerman))
 
-
+<br/>
 
 ## License
 
@@ -30,14 +30,14 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
+<br/>
 
 ## API Protocol
 
 1. [Excursions API Documentation](#COMINGSOON).
 2. [National Park Service (NPS) API Documentation](https://www.nps.gov/subjects/developer/api-documentation.htm).
 
-
+<br/>
 
 ## Features
 
@@ -53,7 +53,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 - User Input Sanitization
 - Rate Limiting
 
-
+<br/>
 
 ## Environment Variables
 
@@ -67,7 +67,7 @@ To run this project, you will need to add the following environment variables to
 | NPS_API_URL          | The base URL for the NPS API service.                       |
 | NPS_API_KEY          | The access key granted by NPS to use their API service.     |
 
-
+<br/>
 
 ## Run Locally
 
