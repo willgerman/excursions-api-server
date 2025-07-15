@@ -64,6 +64,7 @@ router.post('/excursion', auth, payload(permittedExcursionFields), async (req, r
                 $project: {
                     "name": 1,
                     "description": 1,
+                    "isPublic": 1,
                     "isComplete": 1,
                     "createdAt": 1,
                     "updatedAt": 1,
@@ -99,11 +100,15 @@ router.post('/excursion', auth, payload(permittedExcursionFields), async (req, r
     } catch (error) {
         console.log(error);
 
-        // TODO: Implement handling for adding the same trip twice. Potentially a DuplicateKey error code.
+        /**
+         *  11000 is MongoDB's DuplicateKey error code.
+         *  https://www.mongodb.com/docs/manual/reference/error-codes/
+         */
+        if (error.code === 11000) {
+            return res.status(400).send("Unable to create new excursion.");
+        }
 
-        return res.status(400).send("Unable to create new excursion.");
-
-        // return res.status(500).send("Server encountered an unexpected error. Please try again.");
+        return res.status(500).send("Server encountered an unexpected error. Please try again.");
     }
 });
 
@@ -155,6 +160,7 @@ router.get('/excursions', auth, async (req, res) => {
                 $project: {
                     "name": 1,
                     "description": 1,
+                    "isPublic": 1,
                     "isComplete": 1,
                     "createdAt": 1,
                     "updatedAt": 1,
@@ -190,7 +196,9 @@ router.get('/excursions', auth, async (req, res) => {
             return res.status(404).send("Requested resource not found.");
         }
 
-        return res.status(200).send({ excursions });
+        const total = excursions.length;
+
+        return res.status(200).send({ total, excursions });
     } catch (error) {
         console.log(error);
         return res.status(500).send("Server encountered an unexpected error. Please try again.");
@@ -207,7 +215,7 @@ router.get('/excursion/:excursionId', auth, async (req, res) => {
             return res.status(400).send("Invalid Id");
         }
 
-        let excursion = await Excursion.find({ _id: req.params.excursionId });
+        let excursion = await Excursion.findById({ _id: req.params.excursionId });
 
         if (!excursion) {
             return res.status(404).send("Requested resource not found.");
@@ -251,6 +259,7 @@ router.get('/excursion/:excursionId', auth, async (req, res) => {
                 $project: {
                     "name": 1,
                     "description": 1,
+                    "isPublic": 1,
                     "isComplete": 1,
                     "createdAt": 1,
                     "updatedAt": 1,
@@ -299,7 +308,7 @@ router.patch('/excursion/:excursionId', auth, payload(permittedExcursionFields),
             return res.status(400).send("Invalid Id");
         }
 
-        let excursion = await Excursion.find({ _id: req.params.excursionId });
+        let excursion = await Excursion.findById({ _id: req.params.excursionId });
 
         if (!excursion) {
             return res.status(404).send("Requested resource not found.");
@@ -346,6 +355,7 @@ router.patch('/excursion/:excursionId', auth, payload(permittedExcursionFields),
                 $project: {
                     "name": 1,
                     "description": 1,
+                    "isPublic": 1,
                     "isComplete": 1,
                     "createdAt": 1,
                     "updatedAt": 1,
@@ -396,14 +406,14 @@ router.delete('/excursion/:excursionId', auth, async (req, res) => {
             return res.status(400).send("Invalid Id");
         }
 
-        let excursion = await Excursion.find({ _id: req.params.excursionId });
+        let excursion = await Excursion.findById({ _id: req.params.excursionId });
 
         if (!excursion) {
             return res.status(404).send("Requested resource not found.");
         }
 
         if (!excursion.host.equals(req.user._id)) {
-            return res.status(403).send("Forbidden");
+            return res.status(403).send("Forbidden.");
         }
 
         await Excursion.deleteOne({ _id: req.params.excursionId });
@@ -443,6 +453,10 @@ router.post('/share/excursion/:excursionId', auth, payload(permittedExcursionInv
 
         if (!excursion) {
             return res.status(404).send("Requested resource not found.");
+        }
+
+        if (!req.user.friends.includes(req.payload.receiver)) {
+            return res.status(403).send("Forbidden.");
         }
 
         let invite = await ExcursionInvite.exists(

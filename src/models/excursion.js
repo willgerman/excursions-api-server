@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import validator from "validator";
+// TODO: Unique Array Items Plugin
 
 const Schema = mongoose.Schema;
 
@@ -33,24 +34,25 @@ const excursionSchema = new Schema({
     host: {
         type: Schema.Types.ObjectId,
         ref: 'User',
+        unique: false,
         required: true,
     },
     participants: [{
         type: Schema.Types.ObjectId,
         ref: 'User',
-        unique: true,
+        unique: false,
         required: false,
     }],
     invitees: [{
         type: Schema.Types.ObjectId,
         ref: 'User',
-        unique: true,
+        unique: false,
         required: false,
     }],
     trips: [{
         type: Schema.Types.ObjectId,
         ref: 'Trip',
-        unique: true,
+        unique: false,
         required: false,
     }],
     isPublic: {
@@ -99,6 +101,8 @@ excursionSchema.methods.toJSON = function () {
 // NOTE: `create` hook should call this hook as well.
 excursionSchema.pre('save', { document: true, query: false }, async function (next) {
     const excursion = this;
+
+    // TODO: Check for duplicate keys on trips, invitees, and participants. Rejec the save if they are detected.
 
     if (excursion.isModified('trips')) {
         // TODO: Order trips chronologically and set the startDate, and endDate fields appropriately.

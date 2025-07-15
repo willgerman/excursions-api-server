@@ -29,12 +29,14 @@ const permittedTripFields = [
  */
 router.post('/trip', auth, payload(permittedTripFields), async (req, res) => {
     try {
-        const trip = new Trip(req.payload);
+        req.payload.host = req.user._id;
+
+        let trip = new Trip(req.payload);
         await trip.save();
 
         // NOTE: The NPS API could be leveraged here to return additional data without having the client make multiple requests to the web server (i.e., park, campground, etc).
 
-        const host = await User.find(
+        const host = await User.findOne(
             { _id: trip.host },
             {
                 _id: 1,
@@ -57,7 +59,7 @@ router.post('/trip', auth, payload(permittedTripFields), async (req, res) => {
 });
 
 /**
- *  Get Trips
+ *  Get Trips By User
  *  [docs link]
  */
 router.get('/trips', auth, async (req, res) => {
@@ -101,7 +103,9 @@ router.get('/trips', auth, async (req, res) => {
             return res.status(404).send("Requested resource not found.");
         }
 
-        return res.status(200).send({ trips });
+        const total = trips.length;
+
+        return res.status(200).send({ total, trips });
     } catch (error) {
         console.log(error);
         return res.status(500).send("Server encountered an unexpected error. Please try again.");
@@ -118,7 +122,7 @@ router.get('/trip/:tripId', auth, async (req, res) => {
             return res.status(400).send("Invalid Id");
         }
 
-        const trip = await Trip.find({ _id: req.params.tripId });
+        const trip = await Trip.findById({ _id: req.params.tripId });
 
         if (!trip) {
             return res.status(404).send("Requested resource not found.");
@@ -154,13 +158,13 @@ router.get('/trip/:tripId', auth, async (req, res) => {
  *  Update Trip By Id
  *  [docs link]
  */
-router.patch('/trip/:tripId', auth, async (req, res) => {
+router.patch('/trip/:tripId', auth, payload(permittedTripFields), async (req, res) => {
     try {
         if (!mongoose.isValidObjectId(req.params.tripId)) {
             return res.status(400).send("Invalid Id");
         }
 
-        const trip = await Trip.find({ _id: req.params.tripId });
+        const trip = await Trip.findById({ _id: req.params.tripId });
 
         if (!trip) {
             return res.status(404).send("Requested resource not found.");
@@ -175,7 +179,7 @@ router.patch('/trip/:tripId', auth, async (req, res) => {
 
         await trip.save();
 
-        const host = await User.find(
+        const host = await User.findById(
             { _id: trip.host },
             {
                 _id: 1,
@@ -203,18 +207,18 @@ router.patch('/trip/:tripId', auth, async (req, res) => {
  */
 router.delete('/trip/:tripId', auth, async (req, res) => {
     try {
-        if (!mongoose.isValidObjectId(req.params.excursionId)) {
+        if (!mongoose.isValidObjectId(req.params.tripId)) {
             return res.status(400).send("Invalid Id");
         }
 
-        const trip = await Trip.exists({ _id: req.params.tripId });
+        const trip = await Trip.findById({ _id: req.params.tripId });
 
         if (!trip) {
             return res.status(404).send("Requested resource not found.");
         }
 
         if (!trip.host.equals(req.user._id)) {
-            return res.status(403).send("Forbidden");
+            return res.status(403).send("Forbidden.");
         }
 
         await Trip.deleteOne({ _id: req.params.tripId });
