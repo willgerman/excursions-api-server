@@ -1,4 +1,4 @@
-import mongoose, { mongo } from "mongoose";
+import mongoose from "mongoose";
 import validator from "validator";
 
 const Schema = mongoose.Schema;
@@ -130,21 +130,50 @@ tripSchema.methods.toJSON = function () {
 // #region Pre //
 // ----------- //
 
-tripSchema.pre('deleteOne', { document: true, query: false }, async function (next) {
-    const trip = this;
+tripSchema.pre('save',
+    { document: true, query: false },
+    async function (next) {
+        const trip = this;
 
-    await mongoose.model('Excursion').updateMany(
-        { trips: trip._id },
-        { $pull: trip._id }
-    );
+        if (trip.isNew) {
+            await mongoose.model('User').updateOne(
+                { _id: trip.host },
+                { $push: { trips: trip._id } }
+            );
+        }
 
-    await mongoose.model('User').updateOne(
-        { _id: trip.host },
-        { $pull: { trips: trip._id } }
-    );
+        next();
+    });
 
-    next();
-});
+
+tripSchema.pre('deleteOne',
+    { document: true, query: false },
+    async function (next) {
+        const trip = this;
+
+        await mongoose.model('Excursion').updateMany(
+            { trips: trip._id },
+            { $pull: { trips: trip._id } }
+        );
+
+        await mongoose.model('User').updateOne(
+            { _id: trip.host },
+            { $pull: { trips: trip._id } }
+        );
+
+        next();
+    });
+
+
+tripSchema.pre('deleteMany',
+    { document: true, query: false },
+    async function (next) {
+
+        // TODO: Delete all relevant documents and disconnect any relationships.
+
+        next();
+    }
+);
 
 // ----------- //
 // #endregion  //
@@ -153,17 +182,6 @@ tripSchema.pre('deleteOne', { document: true, query: false }, async function (ne
 // ------------ //
 // #region Post //
 // ------------ //
-
-tripSchema.post('create', { document: true, query: false }, async function (next) {
-    const trip = this;
-
-    await mongoose.model('User').updateOne(
-        { _id: trip.host },
-        { $push: { trips: trip._id } }
-    );
-
-    next();
-});
 
 // ------------ //
 // #endregion   //

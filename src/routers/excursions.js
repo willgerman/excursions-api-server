@@ -416,7 +416,7 @@ router.delete('/excursion/:excursionId', auth, async (req, res) => {
             return res.status(403).send("Forbidden.");
         }
 
-        await Excursion.deleteOne({ _id: req.params.excursionId });
+        await excursion.deleteOne();
 
         return res.status(204).send();
     } catch (error) {
@@ -429,7 +429,7 @@ router.delete('/excursion/:excursionId', auth, async (req, res) => {
 // #endregion                   //
 // ---------------------------- //
 
-// NOTE: An array of permitted fields on the `Excursion Invite Schema` that can be modified through a request body payload (i.e, Create/Update, etc).
+// NOTE: An array of permitted fields on the `ExcursionInvite Schema` that can be modified through a request body payload (i.e, Create/Update, etc).
 const permittedExcursionInviteFields = [
     'receiver',
     'isAccepted',
@@ -661,7 +661,7 @@ router.patch('/share/excursions/:inviteId', auth, payload(permittedExcursionInvi
             return res.status(400).send("Invalid Id");
         }
 
-        const invite = await ExcursionInvite.find({ _id: req.params.inviteId });
+        const invite = await ExcursionInvite.findById({ _id: req.params.inviteId });
 
         if (!invite) {
             return res.status(404).send("Requested resource not found.");
@@ -688,7 +688,7 @@ router.patch('/share/excursions/:inviteId', auth, payload(permittedExcursionInvi
         }
 
         // NOTE: Regardless of the value of `isAccepted` we will delete this invite.
-        await ExcursionInvite.deleteOne({ _id: invite._id });
+        await invite.deleteOne();
 
         return res.status(204).send();
     } catch (error) {
@@ -704,20 +704,20 @@ router.patch('/share/excursions/:inviteId', auth, payload(permittedExcursionInvi
 router.delete('/share/excursions/:inviteId', auth, async (req, res) => {
     try {
         if (!mongoose.isValidObjectId(req.params.inviteId)) {
-            return res.status(400).send("Invalid Id");
+            return res.status(400).send("Invalid Id.");
         }
 
-        const invite = await ExcursionInvite.exists({ _id: req.params.inviteId });
+        const invite = await ExcursionInvite.findById({ _id: req.params.inviteId });
 
         if (!invite) {
             return res.status(404).send("Requested resource not found.");
         }
 
         if (!invite.sender.equals(req.user._id)) {
-            return res.status(403).send("Forbidden");
+            return res.status(403).send("Forbidden.");
         }
 
-        await ExcursionInvite.deleteOne({ _id: req.params.inviteId });
+        await invite.deleteOne();
 
         return res.status(204).send();
     } catch (error) {

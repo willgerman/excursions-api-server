@@ -208,7 +208,7 @@ router.patch('/trip/:tripId', auth, payload(permittedTripFields), async (req, re
 router.delete('/trip/:tripId', auth, async (req, res) => {
     try {
         if (!mongoose.isValidObjectId(req.params.tripId)) {
-            return res.status(400).send("Invalid Id");
+            return res.status(400).send("Invalid Id.");
         }
 
         const trip = await Trip.findById({ _id: req.params.tripId });
@@ -221,7 +221,7 @@ router.delete('/trip/:tripId', auth, async (req, res) => {
             return res.status(403).send("Forbidden.");
         }
 
-        await Trip.deleteOne({ _id: req.params.tripId });
+        await trip.deleteOne();
 
         return res.status(204).send();
     } catch (error) {

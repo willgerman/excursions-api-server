@@ -78,26 +78,30 @@ excursionInviteSchema.methods.toJSON = function () {
 //     next();
 // });
 
-excursionInviteSchema.pre('deleteOne', { document: true, query: false }, async function (next) {
-    const invite = this;
+excursionInviteSchema.pre('deleteOne',
+    { document: true, query: false },
+    async function (next) {
+        const invite = this;
 
-    await mongoose.model('Excursion').updateOne(
-        { _id: invite._id },
-        { $pull: { invitees: invite.receiver } }
-    );
+        await mongoose.model('Excursion').updateOne(
+            { _id: invite._id },
+            { $pull: { invitees: invite.receiver } }
+        );
 
-    await mongoose.model('User').updateMany(
-        {
-            $or: [
-                { _id: invite.sender },
-                { _id: invite.receiver },
-            ]
-        },
-        { $pull: { excursionInvites: invite._id } }
-    );
+        await mongoose.model('User').updateMany(
+            {
+                _id: {
+                    $in: [
+                        invite.sender,
+                        invite.receiver
+                    ]
+                }
+            },
+            { $pull: { excursionInvites: invite._id } }
+        );
 
-    next();
-});
+        next();
+    });
 
 // ----------- //
 // #endregion  //

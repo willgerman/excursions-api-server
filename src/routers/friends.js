@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import express from "express";
+import express, { request } from "express";
 import { FriendRequest } from "../models/friendRequest.js";
 import { User } from "../models/user.js";
 import { auth } from "../middleware/auth.js";
@@ -7,7 +7,7 @@ import { payload } from "../middleware/payload.js";
 
 export const router = new express.Router();
 
-// NOTE: An array of permitted fields on the `Friend Request Schema` that can be modified through a request body payload (i.e, Create/Update, etc).
+// NOTE: An array of permitted fields on the `FriendRequest Schema` that can be modified through a request body payload (i.e, Create/Update, etc).
 const permittedFriendRequestFields = [
     'receiver',
     'isAccepted',
@@ -21,16 +21,20 @@ const permittedFriendRequestFields = [
  *  Create Friend Request
  *  [docs link]
  */
-router.post('/friends/requests/:userId', auth, payload(permittedFriendRequestFields), async (req, res) => {
+router.post('/friends/requests/:userId', auth, async (req, res) => {
     try {
         if (!mongoose.isValidObjectId(req.params.userId)) {
-            return res.status(400).send("Invalid Id");
+            return res.status(400).send("Invalid Id.");
         }
 
-        const receiver = await User.find({ _id: req.params.userId });
+        const receiver = await User.findById({ _id: req.params.userId });
 
         if (!receiver) {
             return res.status(404).send("Requested resource not found.");
+        }
+
+        if (req.user.friends.includes(receiver._id)) {
+            return res.status(409).send("Unable to create friend request.");
         }
 
         let request = await FriendRequest.exists(
@@ -43,7 +47,7 @@ router.post('/friends/requests/:userId', auth, payload(permittedFriendRequestFie
         );
 
         if (request) {
-            return res.status(409).send("Duplicate resource found.");
+            return res.status(409).send("Unable to create friend request.");
         }
 
         request = new FriendRequest({
@@ -148,13 +152,15 @@ router.get('/friends/requests', auth, async (req, res) => {
             },
         ]);
 
-        const request = await pipeline.exec();
+        const requests = await pipeline.exec();
 
-        if (!request) {
+        if (!requests) {
             return res.status(404).send("Requested resource not found.");
         }
 
-        return res.status(200).send({ request });
+        const total = requests.length;
+
+        return res.status(200).send({ total, requests });
     } catch (error) {
         console.log(error);
         return res.status(500).send("Server encountered an unexpected error. Please try again.");
@@ -171,7 +177,7 @@ router.patch('/friends/requests/:requestId', auth, payload(permittedFriendReques
             return res.status(400).send("Invalid Id");
         }
 
-        let request = await FriendRequest.find({ _id: req.params.requestId });
+        let request = await FriendRequest.findById({ _id: req.params.requestId });
 
         if (!request) {
             return res.status(404).send("Requested resource not found.");
@@ -187,18 +193,18 @@ router.patch('/friends/requests/:requestId', auth, payload(permittedFriendReques
         await request.save();
 
         if (req.payload.isAccepted) {
-            await User.updateMany(
-                {
-                    $or: [
-                        { _id: request.sender },
-                        { _id: request.receiver },
-                    ]
-                },
+            await User.updateOne(
+                { _id: request.sender },
+                { $push: { friends: request.receiver } }
+            );
+
+            await User.updateOne(
+                { _id: request.receiver },
                 { $push: { friends: request.sender } }
             );
         }
 
-        await FriendRequest.deleteOne({ _id: request._id });
+        await request.deleteOne();
 
         return res.status(204).send();
     } catch (error) {
@@ -217,7 +223,7 @@ router.delete('/friends/requests/:requestId', auth, async (req, res) => {
             return res.status(400).send("Invalid Id.");
         }
 
-        const request = await FriendRequest.exists({ _id: req.params.requestId });
+        const request = await FriendRequest.findById({ _id: req.params.requestId });
 
         if (!request) {
             return res.status(404).send("Requested resource not found.");
@@ -227,7 +233,7 @@ router.delete('/friends/requests/:requestId', auth, async (req, res) => {
             return res.status(403).send("Forbidden.");
         }
 
-        await FriendRequest.deleteOne({ _id: req.params.requestId });
+        await request.deleteOne();
 
         return res.status(204).send();
     } catch (error) {
@@ -265,7 +271,9 @@ router.get('/friends', auth, async (req, res) => {
             return res.status(404).send("Requested resource not found.");
         }
 
-        return res.status(200).send({ friends });
+        const total = friends.length;
+
+        return res.status(200).send({ total, friends });
     } catch (error) {
         console.log(error);
         return res.status(500).send("Server encountered an unexpected error. Please try again.");

@@ -98,34 +98,61 @@ excursionSchema.methods.toJSON = function () {
 // #region Pre //
 // ----------- //
 
-// NOTE: `create` hook should call this hook as well.
-excursionSchema.pre('save', { document: true, query: false }, async function (next) {
-    const excursion = this;
+excursionSchema.pre('save',
+    { document: true, query: false },
+    async function (next) {
+        const excursion = this;
 
-    // TODO: Check for duplicate keys on trips, invitees, and participants. Rejec the save if they are detected.
+        // TODO: Check for duplicate keys on trips, invitees, and participants. Reject the save if they are detected.
 
-    if (excursion.isModified('trips')) {
-        // TODO: Order trips chronologically and set the startDate, and endDate fields appropriately.
-    }
-
-    next();
-});
-
-excursionSchema.pre('deleteOne', { document: true, query: false }, async function (next) {
-    const excursion = this;
-
-    await mongoose.model('User').updateMany(
-        {
-            $or: [
+        if (excursion.isNew) {
+            await mongoose.model('User').updateOne(
                 { _id: excursion.host },
-                { _id: { $in: [...excursion.participants] } },
-            ]
-        },
-        { $pull: { excursions: excursion._id } }
-    );
+                { $push: { excursions: excursion._id } }
+            );
+        }
 
-    next();
-});
+        if (excursion.isModified('trips')) {
+            // TODO: Order trips chronologically and set the startDate, and endDate fields appropriately.
+        }
+
+        next();
+    });
+
+
+excursionSchema.pre('deleteOne',
+    { document: true, query: false },
+    async function (next) {
+        const excursion = this;
+
+        await mongoose.model('User').updateMany(
+            {
+                _id: {
+                    $in: [
+                        excursion.host,
+                        ...excursion.participants
+                    ]
+                }
+            },
+            { $pull: { excursions: excursion._id } }
+        );
+
+        await mongoose.model('ExcursionInvite').deleteMany(
+            { excursion: excursion._id }
+        );
+
+        next();
+    });
+
+excursionSchema.pre('deleteMany',
+    { document: true, query: false },
+    async function (next) {
+
+        // TODO: Delete all relevant documents and disconnect any relationships.
+
+        next();
+    }
+);
 
 // ----------- //
 // #endregion  //

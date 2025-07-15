@@ -54,11 +54,13 @@ router.get('/national-parks', auth, async (req, res) => {
 
             // NOTE: Returns a 500 status to the client because the server exclusive NPS API key is invalid and there is nothing the client can do to fix this.
             if (response.status === 401) {
+                console.log(response);
                 return res.status(500).send("Server encountered an unexpected error. Please try again.");
             }
 
             // NOTE: Returns a 500 status to the client because the server is sending a malformed query to the NPS API and there is nothing the client can do to fix this.
             if (response.status === 403) {
+                console.log(response);
                 return res.status(500).send("Server encountered an unexpected error. Please try again.");
             }
         }

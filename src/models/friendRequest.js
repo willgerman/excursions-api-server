@@ -51,21 +51,47 @@ friendRequestSchema.methods.toJSON = function () {
 // #region Pre //
 // ----------- //
 
-friendRequestSchema.pre('deleteOne', { document: true, query: false }, async function (next) {
-    const request = this;
+friendRequestSchema.pre('save',
+    { document: true, query: false },
+    async function (next) {
+        const request = this;
 
-    await mongoose.model('User').updateMnay(
-        {
-            $or: [
-                { _id: request.sender },
-                { _id: request.receiver },
-            ]
-        },
-        { $pull: { friendRequests: invite._id } }
-    );
+        if (request.isNew) {
+            await mongoose.model('User').updateMany(
+                {
+                    _id: {
+                        $in: [
+                            request.sender,
+                            request.receiver
+                        ]
+                    }
+                },
+                { $push: { friendRequests: request._id } }
+            );
+        }
 
-    next();
-});
+        next();
+    });
+
+friendRequestSchema.pre('deleteOne',
+    { document: true, query: false },
+    async function (next) {
+        const request = this;
+
+        await mongoose.model('User').updateMany(
+            {
+                _id: {
+                    $in: [
+                        request.sender,
+                        request.receiver
+                    ]
+                }
+            },
+            { $pull: { friendRequests: request._id } }
+        );
+
+        next();
+    });
 
 // ----------- //
 // #endregion  //
@@ -74,24 +100,6 @@ friendRequestSchema.pre('deleteOne', { document: true, query: false }, async fun
 // ------------ //
 // #region Post //
 // ------------ //
-
-friendRequestSchema.post('create', { document: true, query: false }, async function (next) {
-    const request = this;
-
-    await mongoose.model('User').updateMany(
-        {
-            $or: [
-                { _id: request.sender },
-                { _id: request.receiver },
-            ]
-        },
-        { $push: { friendRequests: request._id } }
-    );
-
-    // do i need to await invite.save() here ?
-
-    next();
-});
 
 // ------------ //
 // #endregion   //
