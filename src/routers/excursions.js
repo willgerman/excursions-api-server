@@ -449,7 +449,7 @@ router.post('/share/excursion/:excursionId', auth, payload(permittedExcursionInv
             return res.status(400).send("Invalid Id");
         }
 
-        let excursion = await Excursion.exists({ _id: req.params.excursionId });
+        let excursion = await Excursion.findById({ _id: req.params.excursionId });
 
         if (!excursion) {
             return res.status(404).send("Requested resource not found.");
@@ -459,7 +459,7 @@ router.post('/share/excursion/:excursionId', auth, payload(permittedExcursionInv
             return res.status(403).send("Forbidden.");
         }
 
-        let invite = await ExcursionInvite.exists(
+        let invite = await ExcursionInvite.findOne(
             {
                 $and: [
                     { sender: req.user._id },
@@ -481,7 +481,6 @@ router.post('/share/excursion/:excursionId', auth, payload(permittedExcursionInv
 
         let filter = { _id: invite._id };
 
-        // TODO: Test nested projection.
         const pipeline = ExcursionInvite.aggregate([
             { $match: filter },
             {
@@ -489,69 +488,134 @@ router.post('/share/excursion/:excursionId', auth, payload(permittedExcursionInv
                     from: "users",
                     foreignField: "_id",
                     localField: "sender",
-                    as: "sender"
+                    pipeline: [
+                        {
+                            $project: {
+                                "_id": 1,
+                                "userName": 1,
+                                "firstName": 1,
+                                "lastName": 1,
+                                "email": 1,
+                            }
+                        }
+                    ],
+                    as: "sender",
                 }
             },
+            { $unwind: "$sender" },
             {
                 $lookup: {
                     from: "users",
                     foreignField: "_id",
                     localField: "receiver",
-                    as: "receiver"
+                    pipeline: [
+                        {
+                            $project: {
+                                "_id": 1,
+                                "userName": 1,
+                                "firstName": 1,
+                                "lastName": 1,
+                                "email": 1,
+                            }
+                        }
+                    ],
+                    as: "receiver",
                 }
             },
+            { $unwind: "$receiver" },
             {
                 $lookup: {
                     from: "excursions",
                     foreignField: "_id",
                     localField: "excursion",
-                    pipeline: [{
-                        $lookup: {
-                            from: "trips",
-                            foreignField: "_id",
-                            localField: "trips",
-                            as: "trips",
+                    pipeline: [
+                        {
+                            $lookup: {
+                                from: "users",
+                                foreignField: "_id",
+                                localField: "host",
+                                as: "host"
+                            }
                         },
-                    },
-                    {
-                        $project: {
-                            "_id": 1,
-                            "name": 1,
-                            "description": 1,
-                            "park": 1,
-                            "campground": 1,
-                            "activities": 1,
-                            "thingstodo": 1,
-                            "startDate": 1,
-                            "endDate": 1,
+                        { $unwind: "$host" },
+                        {
+                            $lookup: {
+                                from: "users",
+                                foreignField: "_id",
+                                localField: "participants",
+                                as: "participants"
+                            }
+                        },
+                        {
+                            $lookup: {
+                                from: "trips",
+                                foreignField: "_id",
+                                localField: "trips",
+                                pipeline: [
+                                    {
+                                        $lookup: {
+                                            from: "users",
+                                            foreignField: "_id",
+                                            localField: "host",
+                                            as: "host"
+                                        }
+                                    },
+                                    { $unwind: "$host" },
+                                    {
+                                        $project: {
+                                            "_id": 1,
+                                            "name": 1,
+                                            "description": 1,
+                                            "park": 1,
+                                            "campground": 1,
+                                            "activities": 1,
+                                            "thingstodo": 1,
+                                            "startDate": 1,
+                                            "endDate": 1,
+
+                                            "host._id": 1,
+                                            "host.userName": 1,
+                                            "host.firstName": 1,
+                                            "host.lastName": 1,
+                                            "host.email": 1,
+                                        }
+                                    }
+                                ],
+                                as: "trips"
+                            }
+                        },
+                        {
+                            $project: {
+                                "_id": 1,
+                                "name": 1,
+                                "description": 1,
+                                "trips": 1,
+
+                                "host._id": 1,
+                                "host.userName": 1,
+                                "host.firstName": 1,
+                                "host.lastName": 1,
+                                "host.email": 1,
+
+                                "participants._id": 1,
+                                "participants.userName": 1,
+                                "participants.firstName": 1,
+                                "participants.lastName": 1,
+                                "participants.email": 1,
+                            }
                         }
-                    }],
-                    as: "excursion"
+                    ],
+                    as: "excursion",
                 }
             },
+            { $unwind: "$excursion" },
             {
                 $project: {
                     "_id": 1,
+                    "sender": 1,
+                    "receiver": 1,
+                    "excursion": 1,
                     "isAccepted": 1,
-
-                    "sender._id": 1,
-                    "sender.userName": 1,
-                    "sender.firstName": 1,
-                    "sender.lastName": 1,
-                    "sender.email": 1,
-
-                    "receiver._id": 1,
-                    "receiver.userName": 1,
-                    "receiver.firstName": 1,
-                    "receiver.lastName": 1,
-                    "receiver.email": 1,
-
-                    "excursion._id": 1,
-                    "excursion.name": 1,
-                    "excursion.description": 1,
-                    "excursion.trips": 1,
-                    "excursion.createdAt": 1,
-                    "excursion.updatedAt": 1,
                 }
             }
         ]);
@@ -573,7 +637,9 @@ router.get('/share/excursions', auth, async (req, res) => {
     try {
         const filter = {
             _id: {
-                $in: [...req.user.excursionInvites],
+                $in: [
+                    ...req.user.excursionInvites
+                ],
             }
         };
 
@@ -584,56 +650,134 @@ router.get('/share/excursions', auth, async (req, res) => {
                     from: "users",
                     foreignField: "_id",
                     localField: "sender",
-                    as: "sender"
+                    pipeline: [
+                        {
+                            $project: {
+                                "_id": 1,
+                                "userName": 1,
+                                "firstName": 1,
+                                "lastName": 1,
+                                "email": 1,
+                            }
+                        }
+                    ],
+                    as: "sender",
                 }
             },
+            { $unwind: "$sender" },
             {
                 $lookup: {
                     from: "users",
                     foreignField: "_id",
                     localField: "receiver",
-                    as: "receiver"
+                    pipeline: [
+                        {
+                            $project: {
+                                "_id": 1,
+                                "userName": 1,
+                                "firstName": 1,
+                                "lastName": 1,
+                                "email": 1,
+                            }
+                        }
+                    ],
+                    as: "receiver",
                 }
             },
+            { $unwind: "$receiver" },
             {
                 $lookup: {
                     from: "excursions",
                     foreignField: "_id",
                     localField: "excursion",
-                    pipeline: [{
-                        $lookup: {
-                            from: "trips",
-                            foreignField: "_id",
-                            localField: "trips",
-                            as: "trips",
+                    pipeline: [
+                        {
+                            $lookup: {
+                                from: "users",
+                                foreignField: "_id",
+                                localField: "host",
+                                as: "host"
+                            }
+                        },
+                        { $unwind: "$host" },
+                        {
+                            $lookup: {
+                                from: "users",
+                                foreignField: "_id",
+                                localField: "participants",
+                                as: "participants"
+                            }
+                        },
+                        {
+                            $lookup: {
+                                from: "trips",
+                                foreignField: "_id",
+                                localField: "trips",
+                                pipeline: [
+                                    {
+                                        $lookup: {
+                                            from: "users",
+                                            foreignField: "_id",
+                                            localField: "host",
+                                            as: "host"
+                                        }
+                                    },
+                                    { $unwind: "$host" },
+                                    {
+                                        $project: {
+                                            "_id": 1,
+                                            "name": 1,
+                                            "description": 1,
+                                            "park": 1,
+                                            "campground": 1,
+                                            "activities": 1,
+                                            "thingstodo": 1,
+                                            "startDate": 1,
+                                            "endDate": 1,
+
+                                            "host._id": 1,
+                                            "host.userName": 1,
+                                            "host.firstName": 1,
+                                            "host.lastName": 1,
+                                            "host.email": 1,
+                                        }
+                                    }
+                                ],
+                                as: "trips"
+                            }
+                        },
+                        {
+                            $project: {
+                                "_id": 1,
+                                "name": 1,
+                                "description": 1,
+                                "trips": 1,
+
+                                "host._id": 1,
+                                "host.userName": 1,
+                                "host.firstName": 1,
+                                "host.lastName": 1,
+                                "host.email": 1,
+
+                                "participants._id": 1,
+                                "participants.userName": 1,
+                                "participants.firstName": 1,
+                                "participants.lastName": 1,
+                                "participants.email": 1,
+                            }
                         }
-                    }],
-                    as: "excursion"
+                    ],
+                    as: "excursion",
                 }
             },
+            { $unwind: "$excursion" },
             {
                 $project: {
                     "_id": 1,
+                    "sender": 1,
+                    "receiver": 1,
+                    "excursion": 1,
                     "isAccepted": 1,
-
-                    "sender._id": 1,
-                    "sender.userName": 1,
-                    "sender.firstName": 1,
-                    "sender.lastName": 1,
-                    "sender.email": 1,
-
-                    "receiver._id": 1,
-                    "receiver.userName": 1,
-                    "receiver.firstName": 1,
-                    "receiver.lastName": 1,
-                    "receiver.email": 1,
-
-                    "excursion._id": 1,
-                    "excursion.name": 1,
-                    "excursion.description": 1,
-                    "excursion.trips": 1,
-                    "excursion.createdAt": 1,
-                    "excursion.updatedAt": 1,
                 }
             }
         ]);
@@ -644,7 +788,179 @@ router.get('/share/excursions', auth, async (req, res) => {
             return res.status(404).send("Requested resource not found.");
         }
 
-        return res.status(200).send({ invites });
+        const total = invites.length;
+
+        return res.status(200).send({ total, invites });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).send("Server encountered an unexpected error. Please try again.");
+    }
+});
+
+/**
+ *  Get Excursion Invite By Id
+ *  [docs link]
+ */
+router.get('/share/excursions/:inviteId', auth, async (req, res) => {
+    try {
+        if (!mongoose.isValidObjectId(req.params.inviteId)) {
+            return res.status(400).send("Invalid Id");
+        }
+
+        let invite = await ExcursionInvite.findById({ _id: req.params.inviteId });
+
+        if (!invite) {
+            return res.status(404).send("Requested resource not found.");
+        }
+
+        const filter = { _id: invite._id };
+
+        const pipeline = ExcursionInvite.aggregate([
+            { $match: filter },
+            {
+                $lookup: {
+                    from: "users",
+                    foreignField: "_id",
+                    localField: "sender",
+                    pipeline: [
+                        {
+                            $project: {
+                                "_id": 1,
+                                "userName": 1,
+                                "firstName": 1,
+                                "lastName": 1,
+                                "email": 1,
+                            }
+                        }
+                    ],
+                    as: "sender",
+                }
+            },
+            { $unwind: "$sender" },
+            {
+                $lookup: {
+                    from: "users",
+                    foreignField: "_id",
+                    localField: "receiver",
+                    pipeline: [
+                        {
+                            $project: {
+                                "_id": 1,
+                                "userName": 1,
+                                "firstName": 1,
+                                "lastName": 1,
+                                "email": 1,
+                            }
+                        }
+                    ],
+                    as: "receiver",
+                }
+            },
+            { $unwind: "$receiver" },
+            {
+                $lookup: {
+                    from: "excursions",
+                    foreignField: "_id",
+                    localField: "excursion",
+                    pipeline: [
+                        {
+                            $lookup: {
+                                from: "users",
+                                foreignField: "_id",
+                                localField: "host",
+                                as: "host"
+                            }
+                        },
+                        { $unwind: "$host" },
+                        {
+                            $lookup: {
+                                from: "users",
+                                foreignField: "_id",
+                                localField: "participants",
+                                as: "participants"
+                            }
+                        },
+                        {
+                            $lookup: {
+                                from: "trips",
+                                foreignField: "_id",
+                                localField: "trips",
+                                pipeline: [
+                                    {
+                                        $lookup: {
+                                            from: "users",
+                                            foreignField: "_id",
+                                            localField: "host",
+                                            as: "host"
+                                        }
+                                    },
+                                    { $unwind: "$host" },
+                                    {
+                                        $project: {
+                                            "_id": 1,
+                                            "name": 1,
+                                            "description": 1,
+                                            "park": 1,
+                                            "campground": 1,
+                                            "activities": 1,
+                                            "thingstodo": 1,
+                                            "startDate": 1,
+                                            "endDate": 1,
+
+                                            "host._id": 1,
+                                            "host.userName": 1,
+                                            "host.firstName": 1,
+                                            "host.lastName": 1,
+                                            "host.email": 1,
+                                        }
+                                    }
+                                ],
+                                as: "trips"
+                            }
+                        },
+                        {
+                            $project: {
+                                "_id": 1,
+                                "name": 1,
+                                "description": 1,
+                                "trips": 1,
+
+                                "host._id": 1,
+                                "host.userName": 1,
+                                "host.firstName": 1,
+                                "host.lastName": 1,
+                                "host.email": 1,
+
+                                "participants._id": 1,
+                                "participants.userName": 1,
+                                "participants.firstName": 1,
+                                "participants.lastName": 1,
+                                "participants.email": 1,
+                            }
+                        }
+                    ],
+                    as: "excursion",
+                }
+            },
+            { $unwind: "$excursion" },
+            {
+                $project: {
+                    "_id": 1,
+                    "sender": 1,
+                    "receiver": 1,
+                    "excursion": 1,
+                    "isAccepted": 1,
+                }
+            }
+        ]);
+
+        invite = await pipeline.exec();
+
+        if (!invite) {
+            return res.status(404).send("Requested resource not found.");
+        }
+
+        return res.status(200).send({ invite });
     } catch (error) {
         console.log(error);
         return res.status(500).send("Server encountered an unexpected error. Please try again.");

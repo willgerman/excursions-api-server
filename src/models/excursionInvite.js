@@ -1,4 +1,4 @@
-import mongoose, { mongo } from "mongoose";
+import mongoose from "mongoose";
 
 const Schema = mongoose.Schema;
 
@@ -56,27 +56,34 @@ excursionInviteSchema.methods.toJSON = function () {
 // #region Pre //
 // ----------- //
 
-// NOTE: This will function logically, although the question becomes: Should conditional logic like this be kept in a router or performed using middleware hooks? I personally think keeping this type of logic in the router makes it simpler to read, simpler to debug, and allows the developer to constrain built in middleware hooks to things like cascading deletions or data hashing.
+excursionInviteSchema.pre('save',
+    { document: true, query: false },
+    async function (next) {
+        const invite = this;
 
-// excursionInviteSchema.pre('save', { document: true, query: false }, async function (next) {
-//     const invite = this;
+        if (invite.isNew) {
+            await mongoose.model('User').updateMany(
+                {
+                    _id: {
+                        $in: [
+                            invite.sender,
+                            invite.receiver
+                        ]
+                    }
+                },
+                { $push: { excursionInvites: invite._id } }
+            );
 
-//     if (invite.isModified('isAccepted')) {
-//         if (invite.isAccepted) {
-//             await mongoose.model('User').updateOne(
-//                 { _id: invite.receiver },
-//                 { $push: { excursions: invite.excursion } }
-//             );
+            await mongoose.model('Excursion').updateOne(
+                { _id: invite.excursion },
+                { $push: { invitees: invite.receiver } }
+            );
+        }
 
-//             await mongoose.model('Excursion').updateOne(
-//                 { _id: invite.excursion },
-//                 { $push: { participants: invite.receiver } }
-//             );
-//         }
-//     }
+        next();
+    }
+);
 
-//     next();
-// });
 
 excursionInviteSchema.pre('deleteOne',
     { document: true, query: false },
@@ -84,7 +91,7 @@ excursionInviteSchema.pre('deleteOne',
         const invite = this;
 
         await mongoose.model('Excursion').updateOne(
-            { _id: invite._id },
+            { _id: invite.excursion },
             { $pull: { invitees: invite.receiver } }
         );
 
