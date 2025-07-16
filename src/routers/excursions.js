@@ -1048,7 +1048,7 @@ router.delete('/share/excursions/:inviteId', auth, async (req, res) => {
 
 // NOTE: An array of additional permitted fields on the `Excursion Schema` that can be modified through a request body payload (i.e, Create/Update, etc).
 const permittedSharedExcursionFields = [
-    'participants'
+    'participant'
 ];
 
 // ------------------------------------ //
@@ -1056,36 +1056,26 @@ const permittedSharedExcursionFields = [
 // ------------------------------------ //
 
 /**
- *  Remove Participants By Id
+ *  Remove Participant By Id
  *  [docs link]
  */
-router.delete('/share/excursions/:excursionId', auth, payload(permittedSharedExcursionFields), async (req, res) => {
+router.delete('/excursion/participants/:excursionId', auth, payload(permittedSharedExcursionFields), async (req, res) => {
     try {
         if (!mongoose.isValidObjectId(req.params.excursionId)) {
-            return res.status(400).send("Invalid Id");
+            return res.status(400).send("Invalid Id.");
         }
 
-        let excursion = await Excursion.exists({ _id: req.params.excursionId });
+        let excursion = await Excursion.findById({ _id: req.params.excursionId });
 
         if (!excursion) {
             return res.status(404).send("Requested resource not found.");
         }
 
-        if (!excursion.host.equals(req.user._id)) {
-            return res.status(403).send("Forbidden.");
+        const participant = await User.findById({ _id: req.payload.participant });
+
+        if (!participant) {
+            return res.status(404).send("Requested resource not found.");
         }
-
-        // TODO: Determine if there should be some form of validation if there is an array containing some participant id's and non-participant id's.
-
-        await Excursion.updateOne(
-            { _id: req.params.excursionId },
-            { $pull: { participants: { $in: [...req.payload.participants] } } }
-        );
-
-        await User.updateMany(
-            { _id: { $in: [...req.payload.participants] } },
-            { $pull: { excursions: excursion._id } }
-        );
 
         const filter = { _id: req.params.excursionId };
 
@@ -1148,9 +1138,42 @@ router.delete('/share/excursions/:excursionId', auth, payload(permittedSharedExc
             }
         ]);
 
-        excursion = await pipeline.exec();
+        if (excursion.host.equals(req.user._id)) {
+            if (participant._id.equals(req.user._id)) {
+                return res.status(403).send("Forbidden.");
+            }
 
-        return res.status(200).send({ excursion });
+            await Excursion.updateOne(
+                { _id: req.params.excursionId },
+                { $pull: { participants: participant._id } }
+            );
+
+            await User.updateOne(
+                { _id: participant._id },
+                { $pull: { excursions: excursion._id } }
+            );
+
+            // TODO: This pipeline does not return the expected output.
+            excursion = await pipeline.exec();
+
+            return res.status(200).send({ excursion });
+        } else {
+            if (!participant._id.equals(req.user._id)) {
+                return res.status(403).send("Forbidden.");
+            }
+
+            await Excursion.updateOne(
+                { _id: req.params.excursionId },
+                { $pull: { participants: req.user._id } }
+            );
+
+            await User.updateOne(
+                { _id: req.user._id },
+                { $pull: { excursions: excursion._id } }
+            );
+
+            return res.status(204).send();
+        }
     } catch (error) {
         console.log(error);
         return res.status(500).send("Server encountered an unexpected error. Please try again.");
