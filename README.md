@@ -34,7 +34,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ## API Protocol
 
-1. [Excursions API Documentation](#COMINGSOON).
+<!-- 1. [Excursions API Documentation](). -->
+1. Excursions API Documentation (Coming Soon)
 2. [National Park Service (NPS) API Documentation](https://www.nps.gov/subjects/developer/api-documentation.htm).
 
 <br/>
