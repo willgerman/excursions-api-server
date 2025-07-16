@@ -35,7 +35,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ## API Protocol
 
 <!-- 1. [Excursions API Documentation](). -->
-1. Excursions API Documentation (Coming Soon)
+1. Excursions API Documentation. (Coming Soon)
 2. [National Park Service (NPS) API Documentation](https://www.nps.gov/subjects/developer/api-documentation.htm).
 
 <br/>
@@ -72,7 +72,7 @@ To run this project, you will need to add the following environment variables to
 
 ## Run Locally
 
-All instructions below are written for MacOS/Unix systems. If you are on a different environment you must use the equivalent commands.
+All instructions below are written for MacOS/Unix systems. If you are on a different environment you must use the equivalent commands. These instructions assume you have already configured and deployed a MongoDB Cluster to use for this project.
 
 #### 1. Clone the repository and change directories in to the project.
 ```
