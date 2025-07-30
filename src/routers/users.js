@@ -99,6 +99,8 @@ router.get('/user/:userId', auth, async (req, res) => {
 router.get('/users', auth, async (req, res) => {
     try {
         // NOTE: req.query.keywords may need to be better handled (i.e., destructured) to be better used as a search tool.
+
+        // TODO: Update keywords to be a delimited list of terms that are searched on individually and return results (add only unique items to new list that is returned as endpoint response).
         let filter = {};
         if (req.query.keywords) {
             filter = {
@@ -113,14 +115,19 @@ router.get('/users', auth, async (req, res) => {
         const users = await User.find(
             filter,
             {
+                _id: 1,
                 userName: 1,
                 firstName: 1,
                 lastName: 1,
-                _id: 1
+                email: 1,
             }
         )
             .skip(parseInt(req.query.start))
             .limit(parseInt(req.query.limit));
+
+        if (!users) {
+            res.status(404).send("Requested resource not found.");
+        }
 
         return res.status(200).send({ users });
     } catch (error) {
@@ -154,7 +161,10 @@ router.patch('/user', auth, payload(permittedUserFields), async (req, res) => {
             return res.status(400).send("Unable to update user.");
         }
 
+        // TODO: Check different types of MongoDB Error codes and determine when to send a res.status(500) versus a res.status(400)
         return res.status(400).send("Unable to update user.");
+
+        // return res.status(500).send("Server encountered an unexpected error. Please try again.");
     }
 });
 
@@ -198,8 +208,10 @@ router.post('/user/sign-in', payload(permittedUserFields), async (req, res) => {
 
         return res.status(200).send({ user, token });
     } catch (error) {
+        // TODO: Update to return a 400 request when invalid credentials are given and still accept a 500.
         console.log(error);
-        return res.status(500).send("Server encountered an unexpected error. Please try again.");
+        return res.status(400).send("Unable to authenticate user.");
+        // return res.status(500).send("Server encountered an unexpected error. Please try again.");
     }
 });
 

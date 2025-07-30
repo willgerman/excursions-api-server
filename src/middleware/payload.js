@@ -13,7 +13,7 @@ export const payload = (permitted) => {
     return async (req, res, next) => {
         try {
             if (Object.keys(req.body).length === 0) {
-                return res.status(400).send("Missing payload.");
+                return res.status(400).send("Missing or invalid payload.");
             }
 
             const props = Object.keys(req.body);
@@ -21,7 +21,7 @@ export const payload = (permitted) => {
             const isValid = props.every((prop) => permitted.includes(prop));
 
             if (!isValid) {
-                return res.status(400).send("Invalid payload.");
+                return res.status(400).send("Missing or invalid payload.");
             }
 
             let payload = {};

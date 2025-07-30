@@ -133,6 +133,7 @@ userSchema.methods.generateAuthToken = async function () {
 // #region Statics //
 // --------------- //
 
+// TODO: Update this to throw a particular error to be caught by the endpoint.
 userSchema.statics.findByCredentials = async (email, password) => {
     const user = await User.findOne({ email: email });
 
