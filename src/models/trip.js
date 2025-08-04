@@ -38,7 +38,7 @@ const tripSchema = new Schema({
     park: {
         type: String,
         unique: false,
-        required: false,
+        required: true,
         trim: true,
         validate(value) {
             if (!validator.isUUID(value, 4)) {

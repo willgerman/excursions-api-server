@@ -13,15 +13,15 @@ const excursionInviteSchema = new Schema({
         ref: 'User',
         required: true,
     },
-    isAccepted: {
-        type: Boolean,
-        required: true,
-        default: false,
-    },
     excursion: {
         type: Schema.Types.ObjectId,
         ref: 'Excursion',
         required: true,
+    },
+    isAccepted: {
+        type: Boolean,
+        required: true,
+        default: false,
     }
 },
     { timestamps: true }

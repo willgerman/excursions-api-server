@@ -53,7 +53,7 @@ const excursionSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'Trip',
         unique: false,
-        required: false,
+        required: true,
     }],
     isPublic: {
         type: Boolean,

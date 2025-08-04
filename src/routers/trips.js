@@ -119,7 +119,7 @@ router.get('/trips', auth, async (req, res) => {
 router.get('/trip/:tripId', auth, async (req, res) => {
     try {
         if (!mongoose.isValidObjectId(req.params.tripId)) {
-            return res.status(400).send("Invalid Id");
+            return res.status(400).send("Invalid Id.");
         }
 
         const trip = await Trip.findById({ _id: req.params.tripId });
@@ -161,7 +161,7 @@ router.get('/trip/:tripId', auth, async (req, res) => {
 router.patch('/trip/:tripId', auth, payload(permittedTripFields), async (req, res) => {
     try {
         if (!mongoose.isValidObjectId(req.params.tripId)) {
-            return res.status(400).send("Invalid Id");
+            return res.status(400).send("Invalid Id.");
         }
 
         const trip = await Trip.findById({ _id: req.params.tripId });

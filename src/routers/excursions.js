@@ -435,12 +435,12 @@ const permittedExcursionInviteFields = [
     'isAccepted',
 ];
 
-// -------------------------------- //
-// #region Shared Excursion Invites //
-// -------------------------------- //
+// ------------------------- //
+// #region Excursion Invites //
+// ------------------------- //
 
 /**
- *  Create Excursion Share Invite
+ *  Create Excursion Invite
  *  [docs link]
  */
 router.post('/share/excursion/:excursionId', auth, payload(permittedExcursionInviteFields), async (req, res) => {
@@ -1042,9 +1042,9 @@ router.delete('/share/excursions/:inviteId', auth, async (req, res) => {
     }
 });
 
-// -------------------------------- //
-// #endregion                       //
-// -------------------------------- //
+// ------------------------- //
+// #endregion                //
+// ------------------------- //
 
 // NOTE: An array of additional permitted fields on the `Excursion Schema` that can be modified through a request body payload (i.e, Create/Update, etc).
 const permittedSharedExcursionFields = [

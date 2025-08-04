@@ -291,7 +291,7 @@ router.delete('/friends/:userId', auth, async (req, res) => {
         }
 
         if (!req.user.friends.includes(req.params.userId)) {
-            return res.status(400).send("Bad Request.");
+            return res.status(404).send("Requested resource not found.");
         }
 
         await User.updateOne(

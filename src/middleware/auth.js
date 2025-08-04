@@ -20,6 +20,6 @@ export const auth = async (req, res, next) => {
         next();
     } catch (error) {
         console.log(error);
-        return res.status(401).send("Unauthorized");
+        return res.status(401).send("Authentication required. Please provide a valid access token.");
     }
 };
